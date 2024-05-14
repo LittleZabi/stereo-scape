@@ -1,0 +1,1 @@
+export const BACKEND_ = 'http://localhost:5000'
