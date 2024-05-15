@@ -5,10 +5,12 @@
 	import { slide } from 'svelte/transition';
 	import { fluidCb, updatePageIndex, viewPageIndex } from '../lib/store';
 	import FilesInput from '../components/filesInput.svelte';
-	let pageIndex = 0;
+	import Gallery from '../components/Gallery.svelte';
+	import User from '../components/User.svelte'
+	let pageIndex = 5;
 	let pageIndexChanged = false;
 	let interval = undefined;
-	$:$viewPageIndex, pageIndex = $viewPageIndex;
+	$: $viewPageIndex, (pageIndex = $viewPageIndex);
 	let resetIndexChanges = () => {
 		if (interval) clearTimeout(interval);
 		interval = setTimeout(() => {
@@ -144,8 +146,11 @@
 						<span class="arr"> &rightarrow; </span>
 					</a>
 				</div>
-				<div class="f21">
-					<img src="/media/3d-gallery.jpg" alt="3d gallery" />
+				<div class="f21 nx3">
+					<img src="/media/nerf_1.svg" class="x-c" alt="3d gallery" />
+					<a target="_blank" href="/media/nerf_2.png">View image</a>
+					<img src="/media/nerf_2.png" alt="3d gallery" />
+					<a target="_blank" href="/media/nerf_2.png">View image</a>
 				</div>
 			</div>
 		</div>
@@ -158,10 +163,47 @@
 		</div>
 	</div>
 {/if}
+{#if pageIndex === 4}
+	<div transition:slide={{ duration: 2000 }} class="screen">
+		<div class="screen2">
+			<Gallery />
+		</div>
+	</div>
+{/if}
+{#if pageIndex === 5}
+	<div transition:slide={{ duration: 2000 }} class="screen">
+		<div class="screen2">
+			<User/>
+		</div>
+	</div>
+{/if}
 
 <style lang="scss">
 	:root {
 		--head-text-width: 720px;
+	}
+	
+	.nx3 {
+		width: 500px;
+		text-align: center;
+		& img {
+			width: 100% !important;
+			margin-top: 20px;
+		}
+		.x-c {
+			filter: invert(1);
+			width: 80%;
+			margin-left: 15px;
+		}
+		& a {
+			text-align: center;
+			color: dodgerblue;
+			text-decoration: underline;
+			margin-bottom: 20px;
+			display: block;
+			width: 100px;
+			margin: auto;
+		}
 	}
 	.screen {
 		width: 100%;
@@ -195,7 +237,7 @@
 		}
 		& .f20,
 		& .f30 {
-			margin-right: 50px;
+			margin-right: 10px;
 			max-width: 650px;
 		}
 		& .f30 {
@@ -225,23 +267,6 @@
 				width: 350px;
 				border-radius: 8px;
 			}
-		}
-	}
-	.file-input {
-		margin-top: 30px;
-		border-radius: 8px;
-		border: 2px dashed white;
-		padding: 100px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		& button {
-			width: 200px;
-			height: 45px;
-			background: none;
-			color: white;
-			border: 2px solid white;
-			border-radius: 28px;
 		}
 	}
 
@@ -276,7 +301,10 @@
 			background-position-x: -700px;
 		}
 	}
-
+	:global(.scape p svg){
+		margin-top: 10px;
+		margin-right: 12px;
+	}
 	.scape {
 		width: 100%;
 		align-items: center;
@@ -293,10 +321,7 @@
 			font-weight: 600;
 			text-align: center;
 			display: flex;
-			& svg {
-				margin-top: 10px;
-				margin-right: 12px;
-			}
+			
 		}
 	}
 	.grad-line {

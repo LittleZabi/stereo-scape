@@ -69,12 +69,22 @@ button{
 	font-weight: 500;
 	color: #2be92b;
 	&.alert{
-		color: rgb(255 167 0);
+		color: rgb(255 167 0) !important;
 	}
 	&.danger{
-		color: #ff3c60;
+		color: #ff3c60 !important;
+	}
+	&.inline{
+		text-align: center;
+		margin-top: 10px;
+		font-weight: 500;
+		color: #2be92b;
+		position: absolute;
+		bottom: -18px;
+		font-size: 12px;
 	}
 }
+
 .fade-out{
   // opacity: 1;
   animation: fadeOut 300ms ease-in forwards 1;

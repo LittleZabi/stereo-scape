@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import {viewPageIndex} from '../lib/store'
+	import { viewPageIndex, userContext } from '../lib/store';
 	export let fluidToggle;
 	export let fluid;
 </script>
@@ -32,7 +32,11 @@
 			</li>
 			<li>
 				<a href="/login">
-					<Icon icon="uil:user" />
+					{#if $userContext && $userContext.avatar != ''}
+						<img src={$userContext.avatar} alt={$userContext.username} />
+					{:else}
+						<Icon icon="uil:user" />
+					{/if}
 				</a>
 			</li>
 		</ul>
@@ -69,6 +73,13 @@
 	}
 	a {
 		margin: 0 10px;
+		& img {
+			width: 36px;
+			height: 36px;
+			border-radius: 50%;
+			object-fit: cover;
+			border: 2px solid #ffffff4a;
+		}
 	}
 	:global(header nav a svg) {
 		transition: 300ms;
@@ -129,7 +140,7 @@
 		&.active {
 			/* background: rgba(255, 255, 255, 0.135); */
 
-		backdrop-filter: blur(18px);
+			backdrop-filter: blur(18px);
 			height: 50px;
 			& h2 {
 				font-size: 18px;

@@ -5,7 +5,7 @@
 	import '../styles/main.scss';
 	import { onMount } from 'svelte';
 	import { Cookies } from '../lib/globals';
-	import { viewPageIndex, updatePageIndex } from '../lib/store';
+	import { viewPageIndex, updatePageIndex, userContextUpdate } from '../lib/store';
 
 	let fluidLights = false;
 	let buttonIndex = 0
@@ -14,6 +14,12 @@
 		const f = JSON.parse(Cookies.get('fluid_lights'));
 		if (f === null) fluidLights = true;
 		else fluidLights = f;
+
+		let user = Cookies.get('user')
+		if(user) {
+			user = JSON.parse(user)
+			userContextUpdate(user)
+		}
 	});
 	const toggleFluid = () => {
 		fluidLights = !fluidLights;
@@ -33,7 +39,7 @@
 		<main>
 			<slot />
 			<div class="left-button-list">
-				{#each Array(4).fill(0) as _,i }
+				{#each Array(6).fill(0) as _,i }
 					<button on:click={() => handlePage(i)} class={buttonIndex === i ? 'active' : ''}>
 					</button>
 				{/each}

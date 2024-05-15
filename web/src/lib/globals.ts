@@ -3,21 +3,12 @@ export const parse = (json: {} | []) => {
 	if (json) return JSON.parse(JSON.stringify(json));
 	else return json;
 };
-
-export const calcDiscount = (price: number, discount: number) => (price - price * (discount * 0.01)).toFixed(2)
-
-export const getPagination = (cookies: any, url: any) => {
-	let page = Number(url.searchParams.get('p')) ?? 0;
-	let limit = Number(cookies.get('item-per-page') ?? 20);
-	let skip = Number(cookies.get('item-per-page') ?? 20);
-	page = page ? page : 0;
-	limit = limit ? limit : 20;
-	skip = !skip ? 20 : skip;
-	page = page ? page - 1 : page;
-	skip = page * skip;
-	return { skip, limit, page };
-};
-
+export const createForm: (elements:{[key:string]: any}) => FormData = (elements) => {
+	const form = new FormData()
+	for(let item of Object.keys(elements))
+		form.append(item, elements[item])
+	return form 
+}
 export const life = (__time__: string) => {
 	/**
 	 * Format Datetime (Created by LittleZabi -> blueterminal Lab )

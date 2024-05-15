@@ -19,7 +19,7 @@ export const __init__ = (canvas) => {
 		COLORFUL: true,
 		COLOR_UPDATE_SPEED: 5,
 		PAUSED: false,
-		BACK_COLOR: { r: 0, g: 0, b: 0 },
+		BACK_COLOR: {r: 3, g: 3, b: 16},
 		TRANSPARENT: false,
 		BLOOM: true,
 		BLOOM_ITERATIONS: 8,
