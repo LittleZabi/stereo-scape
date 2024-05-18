@@ -3,6 +3,34 @@ export const parse = (json: {} | []) => {
 	if (json) return JSON.parse(JSON.stringify(json));
 	else return json;
 };
+export const lazyLoad = (element: HTMLImageElement | HTMLVideoElement, src: any) => {
+  const loaded = () => {
+    element.style.opacity = "1";
+  };
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting) {
+        element.src = src;
+        if ((element as any).complete) {
+          loaded();
+        } else {
+          element.addEventListener("load", loaded);
+        }
+      }
+    },
+    {
+      root: null,
+      rootMargin: "0px",
+      threshold: 0,
+    }
+  );
+  observer.observe(element);
+  return {
+    destroy() {
+      element.removeEventListener("load", loaded);
+    },
+  };
+};
 export const createForm: (elements:{[key:string]: any}) => FormData = (elements) => {
 	const form = new FormData()
 	for(let item of Object.keys(elements))
@@ -166,6 +194,16 @@ export const staticBody = (visibility: Boolean) => {
 		else document.querySelector('body')?.classList.remove('modal-open');
 	}
 };
+/**
+ * The set function of Cookies object can set cookies by using document.cookie
+ * and you can set 
+ * @param {typeof name} name of the cookie
+ * @param {string | object} value to store
+ * @param {typeof options} options where expires, maxAge, path, domain, secure, sameSite and other options is available
+ * @param {typeof options.expires} options.expires you can set number of days
+ * @param {typeof options.maxAge} options.maxAge is alternative solution of setting expires you can set in number of seconds.
+ * @param {typeof options.path} options.path is path of available cookies the default is `/` its mean cookies will available for all pages and if `/login` is set then cookies will available only in login page.
+ * */
 export const Cookies: {
 	set: (
 		name: string,
@@ -183,6 +221,7 @@ export const Cookies: {
 	delete: (name: string) => void
 } = {
 	set: (name, value, options) => {
+		
 		if (typeof value === 'object') value = JSON.stringify(value)
 		options = options ? options : {};
 		if (options?.expires) options.expires = new Date(Date.now() + 86400000 * Number(options.expires));
@@ -242,6 +281,6 @@ export const getRandomChar = (
 		if (nchar === '') r = Math.ceil(Math.random() * (chars.length - 1));
 		nchar += chars[r];
 	}
-	nchar = nchar.replaceAll('undefined', 'zabi');
+	nchar = nchar.replace(/undefined/g, 'zabi');
 	return options.uppercase ? nchar.toUpperCase() : options.lowercase ? nchar.toLowerCase() : nchar;
 };

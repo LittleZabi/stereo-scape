@@ -3,11 +3,12 @@
 	import TimeGreeding from '../components/TimeGreeding.svelte';
 	import Icon from '@iconify/svelte';
 	import { slide } from 'svelte/transition';
-	import { fluidCb, updatePageIndex, viewPageIndex } from '../lib/store';
+	import { fluidCb, updatePageIndex, userContext, viewPageIndex } from '../lib/store';
 	import FilesInput from '../components/filesInput.svelte';
 	import Gallery from '../components/Gallery.svelte';
-	import User from '../components/User.svelte'
-	let pageIndex = 5;
+	import User from '../components/User.svelte';
+	import Profile from '../components/profile.svelte';
+	let pageIndex = 0;
 	let pageIndexChanged = false;
 	let interval = undefined;
 	$: $viewPageIndex, (pageIndex = $viewPageIndex);
@@ -23,7 +24,7 @@
 		let minScroll = 7;
 		let scrolls = minScroll;
 		let m = scrolls;
-		let maxPages = 3;
+		let maxPages = 5;
 		const getIndex = (e) => {
 			if (!(e.deltaY > 50 || e.deltaY < -50)) scrolls = maxScrol;
 			else scrolls = minScroll;
@@ -50,7 +51,7 @@
 			return pageIndex <= 0 ? 0 : pageIndex >= maxPages ? maxPages : pageIndex;
 		};
 		document.addEventListener('wheel', (e) => {
-			if (pageIndexChanged) return 0;
+			if (pageIndexChanged || e.shiftKey) return 0;
 			pageIndex = getIndex(e);
 		});
 	});
@@ -87,9 +88,6 @@
 					<a href="/" class="btn btn-casual bang-bang">
 						Gallery
 						<span class="arr"> &rightarrow; </span>
-						{#each Array(10).fill(0) as _, i}
-							<div class="cas-{++i}" />
-						{/each}
 					</a>
 				</div>
 				<div class="f21">
@@ -173,7 +171,11 @@
 {#if pageIndex === 5}
 	<div transition:slide={{ duration: 2000 }} class="screen">
 		<div class="screen2">
-			<User/>
+			{#if $userContext && $userContext.email}
+				<Profile />
+			{:else}
+				<User />
+			{/if}
 		</div>
 	</div>
 {/if}
@@ -182,7 +184,6 @@
 	:root {
 		--head-text-width: 720px;
 	}
-	
 	.nx3 {
 		width: 500px;
 		text-align: center;
@@ -256,10 +257,7 @@
 				display: block;
 			}
 			& .btn-casual {
-				box-shadow: unset;
-				background: none;
-				border-radius: 8px;
-				margin-top: 8px;
+				margin-top: 18px;
 			}
 		}
 		& .f21 {
@@ -270,38 +268,19 @@
 		}
 	}
 
-	.h-text {
-		margin-top: 5px;
+	:global(.grad-tape p svg) {
+		color: #ff6692 !important;
 	}
-	.s-view {
-		margin-top: 80px;
-		margin-left: 100px;
-		margin-right: 100px;
-		padding: 40px;
-		border-radius: 8px;
-		background: rgba(21, 2, 75, 0.744);
-		width: auto;
-		backdrop-filter: blur(18px);
+	.grad-tape {
+		background: linear-gradient(90deg, #ff6692, #ff7c7c, #df59fa, #5ff3ff, #8eff8a, #ffc970);
+		background-clip: text;
+		text-transform: uppercase;
+		color: transparent;
+		-webkit-background-clip: text;
+		-moz-background-clip: text;
+		font-weight: 900;
 	}
-	:global(.trans .grad-tape) {
-		background-position-x: 0px !important;
-	}
-	.h-txt {
-		margin-bottom: 10px;
-		margin-left: 100px;
-		& .grad-tape {
-			font-size: 48px;
-			font-weight: 900;
-			transition: 2000ms;
-			text-transform: uppercase;
-			background: linear-gradient(45deg, #5ff2ff, pink, rgb(255, 128, 60), #ff5100);
-			background-clip: text;
-			-webkit-background-clip: text;
-			-webkit-text-fill-color: transparent;
-			background-position-x: -700px;
-		}
-	}
-	:global(.scape p svg){
+	:global(.scape p svg) {
 		margin-top: 10px;
 		margin-right: 12px;
 	}
@@ -321,18 +300,6 @@
 			font-weight: 600;
 			text-align: center;
 			display: flex;
-			
-		}
-	}
-	.grad-line {
-		margin: auto;
-		background: linear-gradient(40deg, #00ffa1, #ffb454, #4cfd91);
-		width: var(--head-text-width);
-		height: 1px;
-		border-radius: 3px;
-		&.line-v {
-			height: 300px;
-			width: 1px;
 		}
 	}
 </style>

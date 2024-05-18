@@ -8,17 +8,26 @@
 	import { viewPageIndex, updatePageIndex, userContextUpdate } from '../lib/store';
 
 	let fluidLights = false;
-	let buttonIndex = 0
-	$:$viewPageIndex, buttonIndex = $viewPageIndex 
+	let buttonIndex = 0;
+	$: $viewPageIndex, (buttonIndex = $viewPageIndex);
+
+	let labels = [
+		'Stereo Scape',
+		'Welcome!',
+		'What is NeRF?',
+		'Upload your images',
+		'Gallery',
+		'Profile'
+	];
 	onMount(() => {
 		const f = JSON.parse(Cookies.get('fluid_lights'));
 		if (f === null) fluidLights = true;
 		else fluidLights = f;
 
-		let user = Cookies.get('user')
-		if(user) {
-			user = JSON.parse(user)
-			userContextUpdate(user)
+		let user = Cookies.get('user');
+		if (user) {
+			user = JSON.parse(user);
+			userContextUpdate(user);
 		}
 	});
 	const toggleFluid = () => {
@@ -26,8 +35,8 @@
 		Cookies.set('fluid_lights', fluidLights);
 	};
 	const handlePage = (i) => {
-		updatePageIndex(i)
-	}
+		updatePageIndex(i);
+	};
 </script>
 
 {#if fluidLights}
@@ -39,8 +48,12 @@
 		<main>
 			<slot />
 			<div class="left-button-list">
-				{#each Array(6).fill(0) as _,i }
-					<button on:click={() => handlePage(i)} class={buttonIndex === i ? 'active' : ''}>
+				{#each labels as label, i}
+					<button
+						on:click={() => handlePage(i)}
+						class={buttonIndex === i ? 'tag-uper active' : 'tag-uper'}
+					>
+						<span class="tag-label">{label}</span>
 					</button>
 				{/each}
 			</div>
@@ -50,6 +63,46 @@
 </div>
 
 <style>
+	.tag-uper {
+		position: relative;
+		&:hover {
+			& .tag-label {
+				visibility: visible;
+				opacity: 1;
+			}
+		}
+	}
+	.tag-label {
+		background: #0f202f;
+		border: 1px solid #ffffff17;
+		position: relative;
+		position: absolute;
+		right: 24px;
+		top: -5px;
+		width: max-content;
+		display: block;
+		padding: 3px 7px;
+		border-radius: 2px;
+		padding-right: 9px;
+		color: rgba(255, 255, 255, 0.843);
+		font-size: 12px;
+		visibility: hidden;
+		opacity: 0;
+		transition: 300ms;
+		&:after {
+			content: '';
+			width: 7px;
+			height: 7px;
+			background: #0f202f;
+			border-top: 1px solid #ffffff17;
+			border-right: 1px solid #ffffff17;
+			position: absolute;
+			right: -5px;
+			transform: rotate(45deg);
+			top: 6px;
+			bottom: 0;
+		}
+	}
 	.left-button-list {
 		display: flex;
 		position: fixed;
@@ -70,12 +123,11 @@
 			background: #fdfdfd4f;
 			margin: 3px 0;
 			transition: 300ms;
-			&:hover{
-				background:#ffffffc8; 
+			&:hover {
+				background: #ffffffc8;
 			}
-			&.active{
-				background:#ffffffc8; 
-
+			&.active {
+				background: #ffffffc8;
 			}
 		}
 	}

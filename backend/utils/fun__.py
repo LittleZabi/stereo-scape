@@ -2,6 +2,7 @@ import string
 import random
 import cv2
 import numpy as np
+import os
 
 def randomString(limit):
     s = string.ascii_lowercase + string.ascii_uppercase
@@ -17,4 +18,4 @@ def resizeAndSave(file, path):
     image = cv2.imdecode(np.array(fb), cv2.IMREAD_COLOR)
     rsi = cv2.resize(image, (100, 100))
     cv2.imwrite(path, rsi)
-    return path
+    return path, os.path.getsize(path)

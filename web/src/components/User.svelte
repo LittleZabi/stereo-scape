@@ -2,9 +2,12 @@
 	import { WEBSITE_NAME } from '../lib/config';
 	import axios from 'axios';
 	import Icon from '@iconify/svelte';
+	import {userContextUpdate} from '../lib/store'
+	import { slide } from 'svelte/transition';
 	import { Cookies, createForm } from '../lib/globals';
+	let loading = false;
 	let interval = undefined;
-	let message: any | { message: string; variant: string } = false
+	let message: any | { message: string; variant: string } = false;
 	const filterUsername: (text: string) => string = (text) => text.replace(/[^a-zA-Z_]/g, '');
 	const dataset = {
 		fullname: '',
@@ -99,6 +102,7 @@
 		}, 800);
 	};
 	const handelForm = async (event: SubmitEvent) => {
+		if(loading) return 0
 		removeMessage([
 			['#email', '.message'],
 			['#fullname', '.message'],
@@ -137,9 +141,9 @@
 		await save_form();
 	};
 	const save_form = async () => {
-		console.log(dataset)
+		loading = true
 		const form = createForm(dataset);
-		message = false
+		message = false;
 		await axios
 			.post('/api/_users/', form, {
 				headers: {
@@ -147,20 +151,21 @@
 				}
 			})
 			.then((res: any) => {
+				loading = false;
 				res = res.data;
-				if (res.success === 0) 
-					message = {message: res.message, variant: 'danger'}
-				if(res.success === 1){
-					message = {message: res.message, variant: 'success'}
-					Cookies.set('user', JSON.stringify(res.user))
+				if (res.success === 0) message = { message: res.message, variant: 'danger' };
+				if (res.success === 1) {
+					message = { message: res.message, variant: 'success' };
+					Cookies.set('user', JSON.stringify(res.user), {expires: 30});
+					userContextUpdate(res.user)
 				}
 			})
 			.catch((error) => {
+				loading = false;
 				if (error.response.status === 422) {
 					console.error(error.response.data.message);
-					message = {message: error.response.data.message, variant: 'danger'}
-				}
-				else console.error(error.message)
+					message = { message: error.response.data.message, variant: 'danger' };
+				} else console.error(error.message);
 			});
 	};
 	const handleProfile = (ev: Event) => {
@@ -176,70 +181,198 @@
 		};
 		reader.readAsDataURL(img);
 	};
+	const handleLogin = async (form: SubmitEvent) => {
+		if(loading) return 0
+		const user = form.target['username'].value;
+		const password = form.target['password'].value;
+		if (!user.length)
+			showMessage('username', {
+				text: 'Please enter username or email address.',
+				variant: 'alert'
+			});
+		if (!password.length)
+			showMessage('password', { text: 'Provide your account password!', variant: 'alert' });
+		if (!user.length || !password.length) return 0;
+		loading = true
+		await axios.post('/api/_users/', createForm({username: user, password}), {
+			headers: {
+				request: 'signIn'
+			}
+		})
+		.then((res:any)=> {
+			loading = false
+			res =res.data
+			if(res.success === 1){
+				message = {message: res.message, variant: 'success'}
+				Cookies.set('user', res.user) 
+				userContextUpdate(res.user)
+			}
+			if(res.success === 0){
+				message = {message: res.message, variant: 'alert'}
+			}
+		}).catch(err => {
+			loading = false
+			console.error(err)
+			message = {message: err.message, variant: 'danger'}
+		})
+	};
+	let view = 0;
 </script>
 
 <div class="form">
-	<h3>BECOME A {WEBSITE_NAME} MEMBER</h3>
-	<h5>
-		Create your {WEBSITE_NAME} Member profile and get full access to our products and buy things, Inspiration
-		and community.
-	</h5>
-	<form on:submit|preventDefault={handelForm}>
-		<div class="flex">
-			<div class="flx-col">
-				<button
-					id="image-view"
-					class="profile"
-					on:click={() => document.getElementById('avatar').click()}
-				>
-					<Icon icon="teenyicons:user-outline" />
-					<span>Browse</span>
-				</button>
-				<input on:change={handleProfile} type="file" id="avatar" />
-			</div>
+	<div class="top-b">
+		<button on:click={() => (view = 0)} class={view ? '' : 'active'}>
+			<Icon icon="grommet-icons:user-admin" /> Login
+		</button>
+		<button on:click={() => (view = 1)} class={view ? 'active' : ''}>
+			<Icon icon="solar:user-plus-broken" />
+			Register
+		</button>
+	</div>
+	{#if view}
+		<div transition:slide>
+			<h3>BECOME A {WEBSITE_NAME} MEMBER</h3>
+			<h5>
+				Create your {WEBSITE_NAME} Member profile and get full access to our services and create your
+				own gallery, Inspiration and community
+			</h5>
+			<form on:submit|preventDefault={handelForm}>
+				<div class="flex">
+					<div class="flx-col">
+						<button
+							id="image-view"
+							class="profile"
+							on:click={() => document.getElementById('avatar').click()}
+						>
+							<Icon icon="teenyicons:user-outline" />
+							<span>Browse</span>
+						</button>
+						<input on:change={handleProfile} type="file" id="avatar" />
+					</div>
 
-			<div class="flx-col">
-				<label for="username">Enter Username</label>
-				<input type="text" on:keyup={checkUsername} id="username" placeholder="E.g. littlezabi_" />
-			</div>
-		</div>
-		<div class="flex">
-			<div class="flx-col">
-				<label for="fullname">Your full name</label>
-				<input type="text" id="fullname" placeholder="E.g. John Doe" />
-			</div>
+					<div class="flx-col">
+						<label for="username">Enter Username</label>
+						<input
+							type="text"
+							on:keyup={checkUsername}
+							id="username"
+							placeholder="E.g. littlezabi_"
+						/>
+					</div>
+				</div>
+				<div class="flex">
+					<div class="flx-col">
+						<label for="fullname">Your full name</label>
+						<input type="text" id="fullname" placeholder="E.g. John Doe" />
+					</div>
 
-			<div class="flx-col">
-				<label for="email">Enter email address</label>
-				<input type="text" id="email" placeholder="E.g. example123@abc.com" />
-			</div>
+					<div class="flx-col">
+						<label for="email">Enter email address</label>
+						<input type="text" id="email" placeholder="E.g. example123@abc.com" />
+					</div>
+				</div>
+				<div class="flex">
+					<div class="flx-col fw">
+						<label for="passion">Your Passion (optional)</label>
+						<input type="text" id="passion" placeholder="E.g. JavaScript Programmer" />
+					</div>
+				</div>
+				<div class="flex">
+					<div class="flx-col">
+						<label for="password">Enter your password</label>
+						<input type="text" id="password" placeholder="choose a strong password" />
+					</div>
+					<div class="flx-col">
+						<label for="re-pass">Re-enter your password</label>
+						<input type="text" id="re-pass" placeholder="Type password again" />
+					</div>
+				</div>
+				<div class="flex">
+					<button type="submit" class="submit">
+						Sign Up
+						{#if loading}
+							<span class="message spinner"></span>
+						{/if}
+					</button>
+
+				</div>
+				{#if message}
+					<div class="message {message.variant}">{message.message}</div>
+				{/if}
+			</form>
 		</div>
-		<div class="flex">
-			<div class="flx-col fw">
-				<label for="passion">Your Passion (optional)</label>
-				<input type="text" id="passion" placeholder="E.g. JavaScript Programmer" />
-			</div>
+	{:else}
+		<div transition:slide>
+			<h3>Login Now</h3>
+			<h5>
+				Login to {WEBSITE_NAME} and get full access to our services and create your own gallery, Inspiration
+				and community.
+			</h5>
+			<form on:submit|preventDefault={handleLogin}>
+				<div class="flex">
+					<div class="flx-col">
+						<label for="username">Enter Username or Email</label>
+						<input
+							type="text"
+							id="username"
+							placeholder="E.g. littlezabi_"
+						/>
+					</div>
+				</div>
+				<div class="flex">
+					<div class="flx-col">
+						<label for="password">Enter your password</label>
+						<input type="password" id="password" placeholder="choose a strong password" />
+					</div>
+				</div>
+				<div class="flex">
+					<button type="submit" class="submit">
+						Sign In
+						{#if loading}
+							<span class="message spinner"></span>
+						{/if}
+					</button>
+				</div>
+				{#if message}
+					<div class="message {message.variant}">{message.message}</div>
+				{/if}
+			</form>
 		</div>
-		<div class="flex">
-			<div class="flx-col">
-				<label for="password">Enter your password</label>
-				<input type="text" id="password" placeholder="choose a strong password" />
-			</div>
-			<div class="flx-col">
-				<label for="re-pass">Re-enter your password</label>
-				<input type="text" id="re-pass" placeholder="Type password again" />
-			</div>
-		</div>
-		<div class="flex">
-			<button type="submit" class="submit">Sign Up</button>
-		</div>
-		{#if message} 
-		<div class='message {message.variant}'>{message.message}</div>
-		{/if}
-	</form>
+	{/if}
 </div>
 
 <style lang="scss">
+	.top-b {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		& button {
+			width: 300px;
+			background: none;
+			color: rgba(255, 255, 255, 0.79);
+			border: 1px solid rgba(255, 255, 255, 0.265);
+			padding: 5px 0;
+			margin-bottom: 5px;
+			margin: 0 5px 10px 20px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			transition:
+				background 200ms linear,
+				color 500ms ease-in-out;
+			border-radius: 28px;
+			&:hover,
+			&.active {
+				background: rgba(255, 255, 255, 0.627);
+				color: black;
+			}
+		}
+	}
+	:global(.top-b svg) {
+		font-size: 18px;
+		margin-right: 10px;
+	}
 	#avatar {
 		display: none;
 	}
@@ -308,9 +441,6 @@
 			color: black;
 		}
 	}
-	.form {
-		font-family: 'JetBrainsMono Nerd Font', consolas;
-	}
 	input,
 	button {
 		outline: none;
@@ -322,13 +452,13 @@
 		position: relative;
 		& label {
 			margin-bottom: 8px;
-			margin-top:8px;
+			margin-top: 8px;
 			color: rgb(221, 221, 221);
 		}
 		width: 100%;
 		& input {
-			width: 85%;
-			height: 21px;
+			width: 90%;
+			height: 24px;
 			padding-left: 8px;
 			border: none;
 			border-bottom: 1px solid #ffffff21;
@@ -347,7 +477,7 @@
 		}
 		&.fw {
 			& input {
-				width: 93%;
+				width: 97%;
 			}
 		}
 	}
@@ -356,6 +486,12 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
+		& .flx-col:nth-child(2) {
+			margin-left: 10px;
+			& input {
+				width: 95%;
+			}
+		}
 	}
 	h3 {
 		text-transform: uppercase;
@@ -367,8 +503,9 @@
 		font-size: 14px;
 	}
 	.form {
+		font-family: var(--secondary-fonts);
 		margin: auto;
 		max-width: 700px;
-		padding: 10px;
+		padding: 0px 10px;
 	}
 </style>

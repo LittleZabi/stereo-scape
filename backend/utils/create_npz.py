@@ -43,4 +43,4 @@ class createNPZ:
     def generate_and_save(self, emit, output='/nerf_data.npz'):
         self.generate(emit);
         self.save(output)
-        return 1 
+        return 1, os.path.getsize(output) 

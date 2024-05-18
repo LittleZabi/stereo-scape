@@ -5,6 +5,7 @@
 	import { BACKEND_ } from '../lib/config';
 	import { io } from 'socket.io-client';
 	import { onMount } from 'svelte';
+	import { userContext } from '../lib/store';
 
 	let message = undefined 
 	let files = [];
@@ -65,9 +66,9 @@
 			return 0;
 		}
 		const form = new FormData();
-		for (let file of files) {
+		for (let file of files)
 			form.append(`f_${String(Math.floor(Math.random() * 99999))}`, file);
-		}
+		form.append('user', $userContext.id)
 		processStarted = true;
 		await axios
 			.post(BACKEND_ + '/files', form, {
@@ -186,6 +187,10 @@
 
 <h3>Upload your images ✅</h3>
 <p class="x23">Enter your images of a object from different view points. ✔</p>
+{#if !$userContext || $userContext.id === undefined}
+	<p style="margin-bottom: 10px;" class="message danger">User is not logged! please login first</p>
+{/if}
+
 <div class="_flex">
 	<div>
 		{#if Object.keys(process).length}
