@@ -1,5 +1,9 @@
 backend/data/
 backend/media/
+backend/videos/
+backend/results/
+backend/colmap/
+
 web/static/media/users/
 __pycache__
 env/

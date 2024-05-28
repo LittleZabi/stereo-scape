@@ -69,14 +69,13 @@ export const __init__ = (canvas) => {
 			depth: false,
 			stencil: false,
 			antialias: false,
-			preserveDrawingBuffer: false
+			preserveDrawingBuffer: false,
 		};
 
 		let gl = canvas.getContext('webgl2', params);
 		const isWebGL2 = !!gl;
 		if (!isWebGL2)
 			gl = canvas.getContext('webgl', params) || canvas.getContext('experimental-webgl', params);
-
 		let halfFloat;
 		let supportLinearFiltering;
 		if (isWebGL2) {

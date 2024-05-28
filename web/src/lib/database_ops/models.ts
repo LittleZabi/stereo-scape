@@ -27,6 +27,8 @@ const UsersDataSchema = new mongoose.Schema(
 		images: { type: Array, default: [], required: false },
 		dataset: { type: String, required: false, defualt: '' },
 		model: { type: String, required: false, default: '' },
+		video: {type: String, required:false},
+		psnrs: {type: Array, required:false},
 		size: {type: Object, required: false, default: {images: 0, dataset: 0, models: 0}}
 	},
 	{ timestamps: true }

@@ -1,30 +1,66 @@
-<script lang="js">
+<script lang="ts">
 	import Icon from '@iconify/svelte';
 	import axios from 'axios';
 	import { slide } from 'svelte/transition';
 	import { BACKEND_ } from '../lib/config';
 	import { io } from 'socket.io-client';
 	import { onMount } from 'svelte';
-	import { userContext } from '../lib/store';
-
-	let message = undefined 
-	let files = [];
+	import { userContext, imagesContext, updateImages, SettingsContext } from '../lib/store';
+	import Process from './process.svelte';
+	// @ts-ignore
+	import { PUBLIC_BACKEND_URL } from '$env/static/public';
+	let message = undefined;
 	let uploadedList = [];
 	let flaskApiBaseUrl = 'hello world';
 	let session_name = undefined;
 	let processStarted = false;
-	let process = {};
-	const handleFileInput = async (ev) => {
+	let ready = false;
+	let estimate_time = 0;
+	let nerfRes = { iteration: 0, image: false };
+	let seriesData: [number?, number?][] = [];
+	let process: { [key: string]: { title: string; progress: number } } = {};
+	let est_intr = undefined;
+	let new_est_time = 0;
+	let output_video = false;
+	const showRemainingTime = (time: number) => {
+		const hr = Math.floor(time / 3600);
+		const min = Math.floor((time % 3600) / 60);
+		const sec = (time % 60).toFixed(1);
+		let f = '';
+		if (hr) f += `${hr} hours `;
+		if (min) f += `${min} minutes `;
+		if (sec) f += `${sec} seconds`;
+		return f;
+	};
+	const estimate_time_interval = () => {
+		new_est_time = estimate_time;
+		if (!new_est_time) return 0;
+		if (est_intr) {
+			clearInterval(est_intr);
+		}
+		est_intr = setInterval(() => {
+			console.log('intervall.....', est_intr, new_est_time)
+			if (new_est_time <= 0) {
+				new_est_time = 0;
+				clearInterval(est_intr);
+			} else {
+				new_est_time = Math.abs(new_est_time - 1);
+			}
+		}, 1000);
+	};
+	$: estimate_time, estimate_time_interval();
+	const handleFileInput = async (ev: any) => {
 		message = false;
 		let f = ev.target.files;
+		let files = [...$imagesContext];
 		if (!files.length) {
-			files = [...f];
+			updateImages([...f]);
 			return 0;
 		}
 		for (let i = 0; i < f.length; i++) {
 			let item = f[i];
 			let isExist = false;
-			files.map((f) => {
+			files.map((f: any) => {
 				if (f.name === item.name) {
 					isExist = true;
 					return 0;
@@ -32,50 +68,89 @@
 			});
 			if (!isExist) files.push(item);
 		}
-		files = [...files];
+		updateImages(files);
 	};
-	let socket = undefined;
+	let socket: any = undefined;
 	const initSocket = async () => {
 		socket = io('http://localhost:5000', {
+			// @ts-ignore
 			'connect timeout': 10000
 		});
 		socket.on('connect', () => {
 			message = false;
-			// console.log('socket created with ID: ', socket.id);
 		});
 		socket.on('connect_error', (error) => {
-			message = {message: 'Flask server is offline!', variant: 'danger'}
+			message = { message: 'Flask server is offline!', variant: 'danger' };
 		});
 		socket.on('error', (error) => {
-			console.error('Error on socket: ', error);
-			message = {message: `Error on sockets: ${error}`, variant: 'danger'}
+			message = { message: `Error on sockets: ${error}`, variant: 'danger' };
+		});
+		socket.on('process_complete', (res) => {
+			message = { message: 'Process completed!' };
+			estimate_time = 0;
+			new_est_time = 0;
+			output_video = res.video;
+			if (est_intr) clearInterval(est_intr);
+		});
+		socket.on('process_stop', (res) => {
+			message = { message: 'Process is stopped!', variant: 'alert' };
+
+		});
+		socket.on('result', (res) => {
+			nerfRes = res;
 		});
 		socket.on('progress', (res) => {
-			process = { ...process, [res.process]: Math.floor(res.percent) };
+			if (res.message) message = { message: res.message, variant: 'alert' };
+			if (res.estimate_time) {
+				estimate_time = res.estimate_time;
+			}
+			if (res.training)
+				seriesData = [...seriesData, [Number(res.training.iteration), Number(res.training.psnr)]];
+			process = {
+				...process,
+				[res.process]: { title: res.title, progress: Number(res.progress).toFixed(1) }
+			};
 		});
+	};
+	const stopProcess = () => {
+		message = { message: 'Stopping process.....', variant: 'alert' };
+		socket.emit('stop_process', { process: false });
+		estimate_time = 0;
+		new_est_time = 0;
+		if (est_intr) clearInterval(est_intr);
+
+			console.log('interval => ', est_intr)
 	};
 	onMount(async () => {
 		await initSocket();
 	});
 	const startProcess = async () => {
-		if (processStarted) {
-			message = {
-				message: 'Process is already started so just wait for results',
-				variant: 'alert'
-			};
-			return 0;
-		}
+		console.log('files: ', $imagesContext)
+		seriesData = [];
+		message = false;
+		// if (processStarted) {
+		// 	message = {
+		// 		message: 'Process is already started so just wait for results',
+		// 		variant: 'alert'
+		// 	};
+		// 	return 0;
+		// }
 		const form = new FormData();
-		for (let file of files)
+		for (let file of $imagesContext)
 			form.append(`f_${String(Math.floor(Math.random() * 99999))}`, file);
-		form.append('user', $userContext.id)
+		form.append('user', $userContext.id);
+		let settings = $SettingsContext;
+		delete settings.isOpened;
+		form.append('config', JSON.stringify(settings));
 		processStarted = true;
 		await axios
 			.post(BACKEND_ + '/files', form, {
 				onUploadProgress: (progressEvent) => {
 					process = {
-						...process,
-						'Uploading Images': Math.round((progressEvent.loaded / progressEvent.total) * 100)
+						uploading_files: {
+							title: 'Uploading Images',
+							progress: Math.round((progressEvent.loaded / progressEvent.total) * 100)
+						}
 					};
 				}
 			})
@@ -88,37 +163,7 @@
 			})
 			.catch((error) => console.error(error));
 	};
-	const sendToTheServer = async () => {
-		let api_url = `${flaskApiBaseUrl}/resize/`;
-		const formData = new FormData();
-		formData.append('session_name', session_name);
-		// formData.append('user', data.user ? data.user.object._id : '');
-		for (let file of files) {
-			console.log(file);
-			return 0;
-			formData.append(`${String(Math.floor(Math.random() * 99999))}`, file.content);
-			formData.append(`filesize`, file.filesize);
-			formData.append(`width`, file.width);
-			formData.append(`height`, file.height);
-			await axios
-				.post(api_url, formData, {
-					headers: {
-						'Content-Type': 'multipart/form-data'
-					}
-				})
-				.then(async (res) => {
-					let response = res.data;
-					session_name = response.session_name;
-					console.log(res.data);
-				})
-				.catch((e) => {
-					message = {
-						message: `Error: ${e.message}`,
-						variant: 'error'
-					};
-				});
-		}
-	};
+
 	const dropLeave = (event) => {
 		event.target.classList.remove('active');
 		try {
@@ -134,16 +179,17 @@
 			k.textContent = "Release to Upload File's";
 		} catch (e) {}
 	}
-	function dropHandler(ev) {
+	function dropHandler(ev: any) {
 		dropLeave(ev);
 		message = false;
 		ev.preventDefault();
+		let files = [...$imagesContext];
 		if (ev.dataTransfer.items) {
 			[...ev.dataTransfer.items].forEach((item, i) => {
 				if (item.kind === 'file') {
 					const file = item.getAsFile();
 					let isExist = false;
-					files.map((f) => {
+					$imagesContext.map((f) => {
 						if (f.name === file.name) {
 							isExist = true;
 							return 0;
@@ -155,29 +201,34 @@
 		} else {
 			[...ev.dataTransfer.files].forEach((file, i) => files.push(file));
 		}
-		files = [...files];
+		updateImages(files);
 	}
 	let selectedFileIndex = null;
 	const removeFile = () => {
-		if(selectedFileIndex){
-		files.splice(selectedFileIndex, 1);
-		files = [...files];
-		}else{
-			message = {message: 'No file selected!', variant: 'alert'}
+		if (selectedFileIndex) {
+			$imagesContext.splice(selectedFileIndex, 1);
+			const files = [...$imagesContext];
+			updateImages(files);
+		} else {
+			message = { message: 'No file selected!', variant: 'alert' };
 		}
 	};
 	const showFile = () => {
-		const file = files[selectedFileIndex];
+		const file = $imagesContext[selectedFileIndex];
 		const reader = new FileReader();
 		reader.onload = (event) => {
 			const contents = event.target.result;
-			const viewer = document.getElementById('image-view');
+			const viewer: any = document.getElementById('image-view');
 			viewer.src = contents;
 		};
 		reader.readAsDataURL(file);
 	};
-	const clearAll = () => (files = []);
-	const selectFile = (e) => {
+	const clearAll = () => {
+		updateImages([]);
+		process = {};
+		message = false;
+	};
+	const selectFile = (e: any) => {
 		if (e.target.value != 'none') {
 			selectedFileIndex = parseInt(e.target.value);
 			showFile();
@@ -185,82 +236,187 @@
 	};
 </script>
 
-<h3>Upload your images ✅</h3>
-<p class="x23">Enter your images of a object from different view points. ✔</p>
+{#if ready}
+	<h3>Images is ready</h3>
+	<p class="x23">
+		Click on start process button to start. before starting make sure you select same object images.
+	</p>
+{:else}
+	<h3>Upload your images or video ✅</h3>
+	<p class="x23">Enter your images/video of object. images from different view points. ✔</p>
+{/if}
 {#if !$userContext || $userContext.id === undefined}
 	<p style="margin-bottom: 10px;" class="message danger">User is not logged! please login first</p>
 {/if}
 
-<div class="_flex">
-	<div>
-		{#if Object.keys(process).length}
+{#if ready}
+	<div class="_flex ready_" style="justify-content: space-between">
+		<div class="xz">
+			<h4>{$imagesContext.length} images is ready</h4>
+			{#if !processStarted}
+				<button class="snd" on:click={() => (ready = false)}>Browse images</button>
+			{/if}
 			{#each Object.keys(process) as proc}
 				<div class="prog-wrap">
-					<h5>{proc} {process[proc]}%</h5>
+					<h5>{process[proc].title} {process[proc].progress}%</h5>
 					<div class="prog-out">
-						<div class="progress" style={`width: ${process[proc]}%`}></div>
+						<div class="progress" style={`width: ${process[proc].progress}%`}></div>
 					</div>
 				</div>
 			{/each}
-		{:else}
+		</div>
+		<div class="xy">
+			<div class="_flex yt">
+				<div class="chart">
+					<Process {seriesData} />
+				</div>
+				{#if nerfRes.image}
+					<div class="output" transition:slide={{axis: 'x'}}>
+						<p>Result {nerfRes.iteration} / {$SettingsContext.n_iterations} Iterations</p>
+						<img src={PUBLIC_BACKEND_URL + nerfRes.image} id="result" alt="" />
+					</div>
+				{/if}
+				{#if output_video}
+					<div transition:slide={{ axis: 'x' }}>
+						<video
+							autoplay
+							muted
+							loop
+							controls
+							class="vid-x"
+							src={PUBLIC_BACKEND_URL + output_video}
+						>
+							<track kind="captions" />
+						</video>
+					</div>
+				{/if}
+			</div>
+			<button class="snd snd1" style="margin-top:10px;" on:click={startProcess}>
+				<Icon icon="material-symbols-light:not-started-outline" style="color: #00ccff" />
+				START
+			</button>
+			<button class="snd snd2" style="margin-top:10px;" on:click={stopProcess}>
+				<Icon icon="ic:round-stop" style="color: #ff0040" />
+				STOP
+			</button>
+
+			{#if estimate_time}
+				<span class="time-rem">
+					{new_est_time ? `${showRemainingTime(new_est_time)} remaining` : ''}
+				</span>
+			{/if}
+		</div>
+	</div>
+{:else}
+	<div class="_flex">
+		<div>
 			<input
 				type="file"
 				id="fileInput"
 				multiple
-				accept="image/*"
+				accept="video/*, image/*"
 				on:change={handleFileInput}
 				style="display:none;"
 			/>
 			<div
 				class="place"
-				aria-label="buttons"
-				aria-roledescription="drag and drop your elements into this container"
-				aria-dropeffect="execute"
+				role="region"
+				aria-labelledby="dropzone-label"
 				on:drop={dropHandler}
 				on:dragleave={dropLeave}
 				on:dragover={dragOverHandler}
 			>
 				<div>
 					<img src="/media/upload.png" alt="upload" />
-					<h4 id="m3c2x99k">Drag and drop your images.</h4>
+					<h4 id="m3c2x99k">Drag and drop your images/video.</h4>
 					<button on:click={() => document.getElementById('fileInput').click()}>Browse</button>
 				</div>
 			</div>
+		</div>
+		{#if $imagesContext.length}
+			<div class="right" transition:slide={{ axis: 'x' }}>
+				<div class="c2z">
+					<h4>Files list</h4>
+					<button class="x32" on:click={() => clearAll()}>
+						<span>Clear All</span>
+						<Icon icon="solar:trash-bin-trash-broken" />
+					</button>
+				</div>
+				<div class="ovx">
+					<select class="select" on:change={selectFile}>
+						<option value="none">Select image to show</option>
+						{#each $imagesContext as file, i}
+							<option value={i}>
+								{i + 1} - {file.name}
+							</option>
+						{/each}
+					</select>
+					<button class="x321" on:click={removeFile}>
+						<Icon icon="solar:trash-bin-trash-broken" />
+					</button>
+				</div>
+				<div class="image-viewer" style="display: {selectedFileIndex != null ? 'block' : 'none'}">
+					<img src="" id="image-view" alt="" />
+				</div>
+				<button class="snd" on:click={() => (ready = !ready)}>Ready</button>
+			</div>
 		{/if}
 	</div>
-	{#if files.length}
-		<div class="right" transition:slide={{ axis: 'x' }}>
-			<div class="c2z">
-				<h4>Files list</h4>
-				<button class="x32" on:click={() => clearAll()}>
-					<span>Clear All</span>
-					<Icon icon="solar:trash-bin-trash-broken" />
-				</button>
-			</div>
-			<div class="ovx">
-				<select class="select" on:change={selectFile}>
-					<option value="none">Select image to show</option>
-					{#each files as file, i}
-						<option value={i}>
-							{i + 1} - {file.name}
-						</option>
-					{/each}
-				</select>
-				<button class="x321" on:click={removeFile}>
-					<Icon icon="solar:trash-bin-trash-broken" />
-				</button>
-			</div>
-			<div class="image-viewer" style="display: {selectedFileIndex ? 'block' : 'none'}">
-				<img src="" id="image-view" alt="" />
-			</div>
-			<button class="snd" on:click={startProcess}>Start Process</button>
-		</div>
-	{/if}
-</div>
+{/if}
 {#if message}
 	<div class="message {message.variant}">{message.message}</div>
 {/if}
+
 <style lang="scss">
+	.vid-x {
+		width: 221px;
+		height: 175px;
+		margin: 24px 0px 5px 9px;
+		border-radius: 6px;
+		object-fit: cover;
+	}
+	.time-rem {
+		font-size: 14px;
+		margin-left: 10px;
+		width: 255px;
+		display: inline-block;
+	}
+	.output {
+		margin-left: 10px;
+		& p {
+			margin-bottom: 5px;
+		}
+		& img {
+			width: 175px;
+			height: 175px;
+			border-radius: 4px;
+		}
+	}
+	.ready_ {
+		margin-top: 28px;
+		& .xz {
+			margin-right: 20px;
+			& h4 {
+				margin-bottom: 10px;
+			}
+			& button {
+				border: none;
+				padding: 0;
+				width: max-content;
+				height: max-content;
+				color: dodgerblue;
+				font-weight: bold;
+				text-decoration: underline;
+				&:hover {
+					background: none;
+					color: white !important;
+				}
+			}
+		}
+		& .xy {
+			margin-left: 20px;
+		}
+	}
 	.image-viewer {
 		margin-bottom: 13px;
 		& img {
@@ -293,22 +449,23 @@
 	}
 	.prog-out {
 		display: flex;
-		height: 10px;
-		width: 600px;
+		height: 3px;
+		width: 300px;
 		background: #0000004f;
 		border-radius: 18px;
 		border: 1px solid #ffffff0f;
 	}
 	.progress {
 		height: 100%;
-		background: linear-gradient(45deg, #b400ff, #0066ff, #00ffff);
+		background: linear-gradient(45deg, #ff0052, #fb0079, #ff008b, #ff2b00);
 		border-radius: 18px;
 		transition: 300ms linear;
 	}
 	.snd {
-		width: 250px;
+		width: 100px;
 		height: 40px;
 		margin: auto;
+		margin-right: 10px;
 		margin-bottom: 10px;
 		background: none;
 		color: white;
@@ -318,10 +475,31 @@
 		font-family: inherit;
 		cursor: pointer;
 		transition: 300ms;
-		&:hover {
-			background: white;
-			color: black;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		&.snd1 {
+			background: #00ff9126;
+			border-color: #00ff9126;
+			&:hover {
+				background: #00ff9136;
+			}
 		}
+		&.snd2 {
+			background: #ff006a4e;
+			border-color: #ff006a4e;
+			&:hover {
+				background: #ff008c67;
+			}
+		}
+		// &:hover {
+		// 	background: white;
+		// 	color: black;
+		// }
+	}
+	:global(.snd svg) {
+		font-size: 28px;
+		margin-right: 8px;
 	}
 	:global(.c2z button svg) {
 		font-size: 16px;

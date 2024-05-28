@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import { viewPageIndex, userContext } from '../lib/store';
+	import { viewPageIndex,updateSettings, userContext, SettingsContext } from '../lib/store';
 	export let fluidToggle;
 	export let fluid;
 </script>
@@ -39,11 +39,27 @@
 					{/if}
 				</a>
 			</li>
+			<li>
+				<button class='setting {$SettingsContext.isOpened ? 'active': ''}' on:click={() => updateSettings({isOpened: !$SettingsContext.isOpened})}>
+					<Icon icon="line-md:cog-loop" />
+				</button>
+			</li>
 		</ul>
 	</nav>
 </header>
 
 <style>
+	.setting{
+		background:none;
+		border:none;
+		color: white;
+		font-size: 26px;
+		padding: 0;
+		cursor: pointer;
+		&.active, &:hover{
+			color: #ffa300; 
+		}
+	}
 	h2 {
 		font-weight: bold;
 		font-size: 23px;
@@ -73,6 +89,9 @@
 	}
 	a {
 		margin: 0 10px;
+&:hover{
+			color: #ffa300;
+		}
 		& img {
 			width: 36px;
 			height: 36px;
@@ -85,6 +104,7 @@
 		transition: 300ms;
 		width: 25px;
 		height: 25px;
+
 	}
 	.fluid {
 		display: flex;
@@ -151,7 +171,7 @@
 			}
 		}
 	}
-	:global(header.active nav a svg) {
+	:global(header.active nav a svg, header.active nav button svg) {
 		width: 20px;
 		height: 20px;
 	}
