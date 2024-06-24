@@ -13,7 +13,10 @@ export const userContextUpdate:(user: {[key:string]:any} | boolean) => any = (us
     userContext.update(() => user)
 }
 
-export const viewPageIndex = writable([0, 0])
+export const editMediaContext:any = writable(false)
+export const updateMediaContext:any = (new_value:any) => editMediaContext.update(() => new_value) 
+
+export const viewPageIndex = writable([0, 0]) // [prev, current] page index
 export const updatePageIndex = (index:[number, number]) => viewPageIndex.update(() => index)
 
 export const SettingsContext = writable({

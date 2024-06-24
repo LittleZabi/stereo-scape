@@ -20,7 +20,7 @@ async function connect() {
     }
     await mongoose.disconnect();
   }
-  const db = await mongoose.connect('mongodb://127.0.0.1/stereoscape');
+  const db = await mongoose.connect('mongodb://127.0.0.1:27017/stereoscape');
   console.log("new connection");
   connection.isConnected = db.connections[0].readyState;
 }

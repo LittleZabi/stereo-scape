@@ -6,13 +6,10 @@
 	import { io } from 'socket.io-client';
 	import { onMount } from 'svelte';
 	import { userContext, imagesContext, updateImages, SettingsContext } from '../lib/store';
-	import Process from './process.svelte';
+	import Process from './pnrs-graph.svelte';
 	// @ts-ignore
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	let message = undefined;
-	let uploadedList = [];
-	let flaskApiBaseUrl = 'hello world';
-	let session_name = undefined;
 	let processStarted = false;
 	let ready = false;
 	let estimate_time = 0;
@@ -21,15 +18,15 @@
 	let process: { [key: string]: { title: string; progress: number } } = {};
 	let est_intr = undefined;
 	let new_est_time = 0;
-	let output_video = false;
+	// let output_video = false;
 	const showRemainingTime = (time: number) => {
 		const hr = Math.floor(time / 3600);
 		const min = Math.floor((time % 3600) / 60);
-		const sec = (time % 60).toFixed(1);
+		const sec = (time % 60).toFixed(0);
 		let f = '';
-		if (hr) f += `${hr} hours `;
-		if (min) f += `${min} minutes `;
-		if (sec) f += `${sec} seconds`;
+		if (hr) f += `${hr} hrs `;
+		if (min) f += `${min} min `;
+		if (sec) f += `${sec} sec`;
 		return f;
 	};
 	const estimate_time_interval = () => {
@@ -39,7 +36,6 @@
 			clearInterval(est_intr);
 		}
 		est_intr = setInterval(() => {
-			console.log('intervall.....', est_intr, new_est_time)
 			if (new_est_time <= 0) {
 				new_est_time = 0;
 				clearInterval(est_intr);
@@ -53,12 +49,28 @@
 		message = false;
 		let f = ev.target.files;
 		let files = [...$imagesContext];
+		if (files.length === 1 && files[0].type === 'video/mp4') files = [];
 		if (!files.length) {
-			updateImages([...f]);
+			let k = [];
+			for (let file of f) {
+				const isVideo = file.type === 'video/mp4';
+				if (isVideo) {
+					k = [file];
+					break;
+				} else {
+					k.push(file);
+				}
+			}
+			updateImages(k);
 			return 0;
 		}
 		for (let i = 0; i < f.length; i++) {
 			let item = f[i];
+			const isVideo = item.type === 'video/mp4';
+			if (isVideo) {
+				files = [item];
+				break;
+			}
 			let isExist = false;
 			files.map((f: any) => {
 				if (f.name === item.name) {
@@ -68,6 +80,7 @@
 			});
 			if (!isExist) files.push(item);
 		}
+		console.log('files: ', files);
 		updateImages(files);
 	};
 	let socket: any = undefined;
@@ -89,17 +102,19 @@
 			message = { message: 'Process completed!' };
 			estimate_time = 0;
 			new_est_time = 0;
-			output_video = res.video;
+			// output_video = res.video;
 			if (est_intr) clearInterval(est_intr);
+			processStarted = false;
 		});
 		socket.on('process_stop', (res) => {
-			message = { message: 'Process is stopped!', variant: 'alert' };
-
+			message = { message: res.message ? res.message : 'Process is stopped!', variant: 'alert' };
+			processStarted = false;
 		});
 		socket.on('result', (res) => {
 			nerfRes = res;
 		});
 		socket.on('progress', (res) => {
+			if (res.process === 'generating_video') if (est_intr) clearInterval(est_intr);
 			if (res.message) message = { message: res.message, variant: 'alert' };
 			if (res.estimate_time) {
 				estimate_time = res.estimate_time;
@@ -113,28 +128,24 @@
 		});
 	};
 	const stopProcess = () => {
+		if (!processStarted) return;
 		message = { message: 'Stopping process.....', variant: 'alert' };
 		socket.emit('stop_process', { process: false });
 		estimate_time = 0;
 		new_est_time = 0;
 		if (est_intr) clearInterval(est_intr);
-
-			console.log('interval => ', est_intr)
 	};
 	onMount(async () => {
 		await initSocket();
 	});
 	const startProcess = async () => {
-		console.log('files: ', $imagesContext)
+		if (processStarted) return;
 		seriesData = [];
 		message = false;
-		// if (processStarted) {
-		// 	message = {
-		// 		message: 'Process is already started so just wait for results',
-		// 		variant: 'alert'
-		// 	};
-		// 	return 0;
-		// }
+		if (!$userContext || $userContext.id === undefined) {
+			message = { message: 'Please login to start process!', variant: 'danger' };
+			return 0;
+		}
 		const form = new FormData();
 		for (let file of $imagesContext)
 			form.append(`f_${String(Math.floor(Math.random() * 99999))}`, file);
@@ -156,7 +167,6 @@
 			})
 			.then((response) => {
 				const res = response.data;
-				console.log(res);
 				if (res.error && res.error != '') {
 					message = { message: res.message, variant: 'danger' };
 				}
@@ -184,12 +194,19 @@
 		message = false;
 		ev.preventDefault();
 		let files = [...$imagesContext];
+		if (files.length === 1 && files[0].type === 'video/mp4') files = [];
+		console.log(files);
 		if (ev.dataTransfer.items) {
-			[...ev.dataTransfer.items].forEach((item, i) => {
+			for (let item of [...ev.dataTransfer.items]) {
+				const file = item.getAsFile();
+				const isVideo = item.type === 'video/mp4';
+				if (isVideo) {
+					files = [file];
+					break;
+				}
 				if (item.kind === 'file') {
-					const file = item.getAsFile();
 					let isExist = false;
-					$imagesContext.map((f) => {
+					$imagesContext.map((f: any) => {
 						if (f.name === file.name) {
 							isExist = true;
 							return 0;
@@ -197,9 +214,16 @@
 					});
 					if (!isExist) files.push(file);
 				}
-			});
+			}
 		} else {
-			[...ev.dataTransfer.files].forEach((file, i) => files.push(file));
+			for (let file of [...ev.dataTransfer.files]) {
+				const isVideo = file.type === 'video/mp4';
+				if (isVideo) {
+					files = [file];
+					break;
+				}
+				files.push(file);
+			}
 		}
 		updateImages(files);
 	}
@@ -243,7 +267,7 @@
 	</p>
 {:else}
 	<h3>Upload your images or video ✅</h3>
-	<p class="x23">Enter your images/video of object. images from different view points. ✔</p>
+	<p class="x23">Enter your images/video of object. only one video is supported of object. add images/video from different view points of object. ✔</p>
 {/if}
 {#if !$userContext || $userContext.id === undefined}
 	<p style="margin-bottom: 10px;" class="message danger">User is not logged! please login first</p>
@@ -271,12 +295,12 @@
 					<Process {seriesData} />
 				</div>
 				{#if nerfRes.image}
-					<div class="output" transition:slide={{axis: 'x'}}>
+					<div class="output" transition:slide={{ axis: 'x' }}>
 						<p>Result {nerfRes.iteration} / {$SettingsContext.n_iterations} Iterations</p>
 						<img src={PUBLIC_BACKEND_URL + nerfRes.image} id="result" alt="" />
 					</div>
 				{/if}
-				{#if output_video}
+				<!-- {#if output_video}
 					<div transition:slide={{ axis: 'x' }}>
 						<video
 							autoplay
@@ -289,13 +313,21 @@
 							<track kind="captions" />
 						</video>
 					</div>
-				{/if}
+				{/if} -->
 			</div>
-			<button class="snd snd1" style="margin-top:10px;" on:click={startProcess}>
+			<button
+				class="snd snd1 {processStarted ? 'active' : ''}"
+				style="margin-top:10px;"
+				on:click={startProcess}
+			>
 				<Icon icon="material-symbols-light:not-started-outline" style="color: #00ccff" />
 				START
 			</button>
-			<button class="snd snd2" style="margin-top:10px;" on:click={stopProcess}>
+			<button
+				class="snd snd2 {!processStarted ? 'active' : ''}"
+				style="margin-top:10px;"
+				on:click={stopProcess}
+			>
 				<Icon icon="ic:round-stop" style="color: #ff0040" />
 				STOP
 			</button>
@@ -314,7 +346,7 @@
 				type="file"
 				id="fileInput"
 				multiple
-				accept="video/*, image/*"
+				accept="video/mp4, image/*"
 				on:change={handleFileInput}
 				style="display:none;"
 			/>
@@ -490,6 +522,19 @@
 			border-color: #ff006a4e;
 			&:hover {
 				background: #ff008c67;
+			}
+		}
+		&.active {
+			opacity: 0.3;
+			&.snd1 {
+				&:hover {
+					background: #00ff9126;
+				}
+			}
+			&.snd2 {
+				&:hover {
+					background: #ff006a4e;
+				}
 			}
 		}
 		// &:hover {

@@ -1,11 +1,13 @@
 import subprocess
 import os
-from .fun__ import deleteFilesAndFolder
+import shutil
+# from .fun__ import deleteFilesAndFolder
 
 class COLMAP:
     def __init__(self, images_path, emit, checkProcessExecution):
         self.images_path = images_path
-        self.db_path = f"{os.getenv('colmap')}\\outputs\\database.db"
+        self.project_path = f"{os.getenv('colmap')}\\outputs\\"
+        # self.db_path = f"{os.getenv('colmap')}\\outputs\\database.db"
         self.sparse = f"{os.getenv('colmap')}\\outputs\\sparse\\"
         self.colmap = f"{os.getenv('colmap')}\\COLMAP.bat"
         self.output_txt = f"{os.getenv('colmap')}\\"
@@ -16,7 +18,12 @@ class COLMAP:
         self.startProcess()
 
     def startProcess(self) :
-        pipe = [self.ExtractFeatures, self.ExhaustiveMatcher, self.Mapper, self.ConvertModel, self.delete_colmap_outputs]
+        pipe = [
+            self.ExtractFeatures, 
+            # self.ExhaustiveMatcher, 
+            # self.Mapper, 
+            self.ConvertModel, 
+            self.delete_colmap_outputs]
         for _ in pipe:
             if self.checkProcessExecution():
                 return None
@@ -24,22 +31,27 @@ class COLMAP:
                 _()
 
     def ExtractFeatures(self):
-        command = f'{self.colmap} feature_extractor --database_path {self.db_path} --image_path {self.images_path}'
+        # command = f'{self.colmap} feature_extractor  --database_path {self.db_path} --image_path {self.images_path} --num_threads 4 --max_num_features 2000 --feature_type sift --sift_num_octaves 5 --sift_octave_resolution 1.6'
+        # command = f"{self.colmap} automatic_reconstructor --project_path {self.project_path}"
+        self.emit('progress', {'process': 'colmap', 'title': 'Extracting Features from images', 'progress': 13})
+        command = f'{self.colmap} automatic_reconstructor --workspace_path {self.project_path} --image_path {self.images_path} --data_type individual --quality high --num_threads 4'
         subprocess.run(['cmd', '/c', 
-            [command]
+            command
         ])
-        self.emit('progress', {'process': 'colmap', 'title': 'Extracting Features from images', 'progress': 1 / self.total_functions * 100})
+        self.emit('progress', {'process': 'colmap', 'title': 'Extracting Features from images', 'progress': 68})
         print('feature extracting done')
 
     def ExhaustiveMatcher(self):
-        subprocess.run(['cmd', '/c', 
-            f'{self.colmap} exhaustive_matcher --database_path {self.db_path}'
-                    ])
+        command = f'{self.colmap} exhaustive_matcher --database_path {self.db_path}'
+        # command = f'{self.colmap} exhaustive_matcher --project_path {self.project_path}'
+        # command
+        subprocess.run(['cmd', '/c', command])
         self.emit('progress', {'process': 'colmap', 'title': 'Colmap exhaustive matcher', 'progress': 2 / self.total_functions * 100})
         print('Mathcher done')
     
     def Mapper(self):
         command = f'{self.colmap} mapper --database_path {self.db_path} --image_path {self.images_path} --output_path {self.sparse}'
+        # command = f'{self.colmap} mapper --project_path {self.project_path}'
         subprocess.run(['cmd', '/c', command]) 
         self.emit('progress', {'process': 'colmap', 'title': 'Colmap mapper', 'progress': 3 / self.total_functions * 100})
         print('Mapper done!')
@@ -63,9 +75,16 @@ class COLMAP:
     
 
     def delete_colmap_outputs(self):
-        db_path = f'{os.getcwd()}\\colmap\\outputs\\database.db'
-        sparse_dir = f'{os.getcwd()}\\colmap\\outputs\\sparse\\0\\'
+        shutil.rmtree(self.project_path)
+        os.mkdir(self.project_path)
         if not self.error:
             self.emit('progress', {'process': 'colmap', 'title': 'Clearing up files', 'progress': 5 / self.total_functions * 100})
-        deleteFilesAndFolder(db_path, deleteFolder=False, deleteFiles=True) 
-        deleteFilesAndFolder(sparse_dir, deleteFiles=True) 
+
+# if __name__ == '__main__':
+#     os.environ['colmap'] = f'{os.getcwd()}\\colmap\\'
+#     def checkProcessExecution():
+#         return 
+#     def emit(a, b):
+#         print(a, b)
+    
+#     COLMAP('F:\\final_year\\backend\\colmap\\project\\images\\', emit, checkProcessExecution)

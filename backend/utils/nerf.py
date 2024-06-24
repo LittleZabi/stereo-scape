@@ -1,4 +1,5 @@
 import numpy as np
+import json
 from .fun__ import randomString
 import time
 import os
@@ -11,7 +12,9 @@ tf.compat.v1.enable_eager_execution()
 
 class NeRF:
     "FastNeRF class"
-    def __init__(self, emit, checkProcessExecution, config):
+    def __init__(self, emit, checkProcessExecution, config, media_path, save_modal=True):
+        self.save_modal= save_modal 
+        self.media_path = media_path
         self.checkProcessExecution = checkProcessExecution
         self.emit = emit
         self.N_samples = 64
@@ -41,8 +44,16 @@ class NeRF:
         if config.get('n_samples'):
             self.N_samples = config.get('n_samples')
         self.model = self.init_model(D=self.modalDepth, W=self.modalWidth)
+        # self.model = tf.keras.models.load_model('./models/mode.h5', compile=False)
         self.clearResultsDir()
-    
+
+    def saveModel(self, path):
+        p = f"{path}{os.sep}saved_model"
+        os.mkdir(p)
+        tf.keras.models.save_model(self.model, p, save_format='tf')
+        np.savez(f"{path}{os.sep}saved_model{os.sep}config.npz", H=self.H, W=self.W, focal=self.focal, testpose=self.testpose, N_samples=self.N_samples)
+        return path
+
     def clearResultsDir(self):
         if os.path.exists('./results') and os.path.isdir('./results'):
             try:
@@ -70,37 +81,6 @@ class NeRF:
         self.images = images[:self.images_len - 3,...,:3]
         self.poses = poses[:self.images_len - 3]
    
-    def generate360Frames(self, video_path):
-        print('generating video.....')
-        frames = []
-        start_time = time.time()
-        prcnt = 0
-        i = 0
-        for th in np.linspace(0., 360., 120, endpoint=False):
-            if self.checkProcessExecution():
-                return None 
-            i += 1
-            prcnt = i / 360 * 300
-            c2w = self.pose_spherical(th, -30., 4.)
-            rays_o, rays_d = self.get_rays(self.H, self.W, self.focal, c2w[:3,:4])
-            rgb, depth, acc = self.render_rays(self.model, rays_o, rays_d, near=2., far=6., N_samples=self.N_samples)
-            frames.append((255*np.clip(rgb,0,1)).astype(np.uint8))
-            current_time = time.time()
-            elapsed_time = current_time - start_time
-            estimate_time = elapsed_time / (i + 1)
-            estimate_total = estimate_time * self.number_of_iterations
-            estimate_ramain_time = estimate_total - elapsed_time
-            print(estimate_ramain_time)
-            self.emit('progress', {'estimate_time': 0,'process': 'generating_video', 'title': 'Generating 360 video', 'progress': prcnt})
-        
-        fourcc = cv2.VideoWriter_fourcc(*'X264')
-        width, height = frames[0].shape[:2]
-        video = cv2.VideoWriter(video_path, fourcc=fourcc, fps=30, frameSize=(width, height))
-        for f in frames:
-            video.write(f)
-        video.release()
-        self.video_size = os.path.getsize(video_path)
-
     def pose_spherical(self, theta, phi, radius):
         trans_t = lambda t : tf.convert_to_tensor([
             [1,0,0,0],
@@ -161,10 +141,11 @@ class NeRF:
                 rgb, depth, acc = self.render_rays(self.model, rays_o, rays_d, near=2., far=6., N_samples=self.N_samples)
                 loss = tf.reduce_mean(tf.square(rgb - self.testimg))
                 psnr = -10. * tf.math.log(loss) / tf.math.log(10.)
-                self.psnrs.append(float(psnr.numpy()))
+                self.psnrs.append([1 + i, float(psnr.numpy())])
                 iternums.append(i)
                 percent = i / self.number_of_iterations * 100
-                self.emit('progress', {'estimate_time': estimate_ramain_time, 'process': 'nerf', 'title': 'Model Training (this process can take long)', 'progress': percent, 'training': {'psnr': str(psnr.numpy()), 'iteration': str(i)}})
+                if estimate_ramain_time > 0:
+                    self.emit('progress', {'estimate_time': estimate_ramain_time, 'process': 'nerf', 'title': 'Model Training (this process can take long)', 'progress': percent, 'training': {'psnr': str(psnr.numpy()), 'iteration': str(i)}})
                 img = f'/results/rgb-{randomString(5)}.jpg'
                 plt.imsave('.' + img, rgb.numpy())
                 self.emit('result', {'iteration': i, 'image': img})
@@ -174,13 +155,15 @@ class NeRF:
                     except Exception as _:
                         pass
                 resultImagePrev = '.' + img
+
+        self.emit('progress', {'process': 'nerf', 'title': 'Model Training (this process can take long)', 'progress': 100, 'training': {'psnr': str(psnr.numpy()), 'iteration': str(i)}})
         if self.checkProcessExecution():
-               return None 
- 
-        if self.generate_video:
-            self.generate360Frames(video_path='.' + self.output_video)
-    #   tf.keras.models.save_model(model, 'nerf_model_x.h5', include_optimizer=False) 
-    #   print('Done')
+            return None 
+        
+        if self.save_modal:
+            self.saveModel(self.media_path)
+
+        
     def posenc(self, x):
         rets = [x]
         for i in range(self.L_embed):
@@ -222,7 +205,8 @@ class NeRF:
 
         # Run network
         pts_flat = tf.reshape(pts, [-1,3])
-        pts_flat = self.embed_fn(pts_flat)
+        # pts_flat = self.embed_fn(pts_flat)
+        pts_flat = self.posenc(pts_flat)
         raw = batchify(network_fn)(pts_flat)
         raw = tf.reshape(raw, list(pts.shape[:-1]) + [4])
 

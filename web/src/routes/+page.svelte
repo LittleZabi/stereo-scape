@@ -20,10 +20,11 @@
 	let maxScrol = 50;
 	let minScroll = 2;
 	let index: number = 0;
+	$: $viewPageIndex, (index = $viewPageIndex[1])
 	let scrolls = minScroll;
 	let m = scrolls;
 	let maxPages = 5;
-	const getIndex = (e) => {
+	const getIndex = (e: any) => {
 		if (!(e.deltaY > 50 || e.deltaY < -50)) scrolls = maxScrol;
 		else scrolls = minScroll;
 		if (e.deltaY >= 0) {
@@ -37,7 +38,7 @@
 		if (e.deltaY <= 0) {
 			m--;
 			if (m === 0) {
-				index = index
+				index = index;
 				index = index - 1;
 				pageIndexChanged = true;
 				m = scrolls;
@@ -47,6 +48,7 @@
 			$fluidCb(2);
 			index = index <= 0 ? 0 : index >= maxPages ? maxPages : index;
 			updatePageIndex([$viewPageIndex[1], index]);
+			window.localStorage.setItem('cur_page', `[${$viewPageIndex[1]}, ${index}]`);
 		}
 	};
 
@@ -181,7 +183,7 @@
 			in:fly={{ delay: 100, duration: 1000, y: $viewPageIndex[0] > $viewPageIndex[1] ? -500 : 500 }}
 			out:fly={{ duration: 400, y: $viewPageIndex[0] > $viewPageIndex[1] ? 500 : -500 }}
 		>
-			<div class="screen2">
+			<div class="screen2" style="backdrop-filter: unset;background: unset">
 				<Gallery />
 			</div>
 		</div>

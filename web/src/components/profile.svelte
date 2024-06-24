@@ -1,18 +1,47 @@
 <script lang="ts">
-	import { userContext } from '../lib/store';
+	import { updateMediaContext, userContext, userContextUpdate } from '../lib/store';
 	// @ts-ignore
 	import { PUBLIC_BACKEND_URL } from '$env/static/public';
 	import Icon from '@iconify/svelte';
 	import { onMount } from 'svelte';
-	import { lazyLoad } from '../lib/globals';
+	import { Cookies, lazyLoad, life, numberFormat } from '../lib/globals';
+	import axios from 'axios';
 
-	onMount(() => {
-		const lazyLoadList = document.querySelectorAll('.lazy-load');
+	let items = [];
+	const setLazyLoad = () => {
+		const lazyLoadList = document.querySelectorAll('video.lazy-load');
 		lazyLoadList.forEach((element: HTMLImageElement | HTMLVideoElement) => {
 			let src = element.getAttribute('data-src');
 			lazyLoad(element, src);
 		});
+	};
+	onMount(async () => {
+		await getData(true);
 	});
+	const getData = async (getDates = false) => {
+		if ($userContext.id) {
+			await axios
+				.get('/api/fetch/', {
+					headers: {
+						request: 'fetch_user_data'
+					},
+					params: { _id: $userContext.id }
+				})
+				.then((res) => {
+					items = res.data;
+					setTimeout(() => {
+						setLazyLoad();
+					}, 2000);
+				})
+				.catch((err) => {
+					console.error(err);
+				});
+		}
+	};
+	const handleLogout = () => {
+		Cookies.delete('user');
+		userContextUpdate(false);
+	};
 </script>
 
 <div class="profile">
@@ -26,47 +55,56 @@
 			{$userContext.passion != '' ? $userContext.passion : ''}
 		</span>
 		<span class="email">{$userContext.email}</span>
-		<button>
+		<button on:click={handleLogout}>
 			Logout <Icon icon="solar:logout-2-broken" />
 		</button>
 	</div>
 	<div class="right">
-		<h3>My gallery</h3>
+		<h3>MY GALLERY</h3>
 		<div class="">
-			<button class="tim">
-				<span>12 May 2024 </span>
-				<Icon icon="oui:arrow-down" />
-			</button>
-			<button class="tim">
-				<span>30 January 2024</span>
-				<Icon icon="oui:arrow-down" />
-			</button>
 			<div class="rows" id="scrollar">
-				{#each Array(10).fill(0) as _}
-					<div class="gal">
-						<video controls class="lazy-load" data-src={PUBLIC_BACKEND_URL + '/videos/trex.mp4'}>
-							<track kind="captions" />
-						</video>
-						<div class="galx">
-							<span class="t"
-								><li>Trex 360 view full viewo f the askdflaskfa sdlfkjasdlf gozida</li></span
-							>
-							<a href="/datasetr">
-								<Icon icon="ph:images-fill" />
-								View images
-							</a>
-							<a href="/npz">
-								<Icon icon="majesticons:data-line" />
-								Download dataset file
-							</a>
-							<a href="/model">
-								<Icon icon="carbon:machine-learning-model" />
-								Download trained model</a
-							>
-							<span class="xz">Created on 23 june 2019</span>
+				{#if items.length}
+					{#each items as item}
+						<div class="gal">
+							{#if item.video}
+								<video controls class="lazy-load" data-src={PUBLIC_BACKEND_URL + item.video}>
+									<track kind="captions" />
+								</video>
+							{:else}
+								<img class="place-img" src={PUBLIC_BACKEND_URL + '/media/' + item.media + '/1.jpg'} alt="" />
+							{/if}
+							<div class="galx">
+								<span class="t">
+									<li>{life(item.createAt).format('D MM YYYY')}</li>
+									<li>
+										{item.psnrs.pop()[1].toFixed(1)} psnr score on {numberFormat(
+											item.psnrs.pop()[0]
+										)}
+										iterations
+									</li></span
+								>
+								<button class="xy-b" on:click={() => updateMediaContext({...item, username: $userContext.username})}>
+									Edit Pre-trained Model 
+									<Icon icon="carbon:machine-learning-model" />
+								</button>
+								<!-- <a href="/datasetr">
+									<Icon icon="ph:images-fill" />
+									View images
+								</a>
+								<a href="/npz">
+									<Icon icon="majesticons:data-line" />
+									Download dataset file
+								</a>
+								<a href="/model">
+									Download trained model</a
+								> -->
+								<span class="xz">Created on {life(item.createdAt).format('DD MM YYYY')}</span>
+							</div>
 						</div>
-					</div>
-				{/each}
+					{/each}
+				{:else}
+					<h1 style="margin-top: 40px; font-size: 22px; opacity: 0.5">NO ITEMS</h1>
+				{/if}
 			</div>
 		</div>
 	</div>
@@ -81,27 +119,7 @@
 		justify-content: flex-start;
 		overflow-x: scroll;
 	}
-	.tim {
-		width: max-content;
-		min-width: 150px;
-		padding: 0 0px 0 10px;
-		margin-top: 10px;
-		margin-bottom: 10px;
-		color: rgb(170, 170, 170);
-		font-size: 14px;
-		border-bottom: 1px solid rgba(255, 255, 255, 0.051);
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		background: none;
-		border: none;
-		transition: 400ms;
-		cursor: pointer;
-		&:hover,
-		&.active {
-			color: white;
-		}
-	}
+
 	:global(.galx a svg) {
 		margin-right: 5px;
 		font-size: 18px;
@@ -114,7 +132,7 @@
 	.galx {
 		display: flex;
 		flex-direction: column;
-		margin-left: 10px;
+		margin-top: 10px;
 		width: 200px;
 		& a {
 			margin-top: 8px;
@@ -137,9 +155,13 @@
 	.gal {
 		margin: 10px;
 		display: flex;
-		align-items: start;
+		align-items: center;
 		justify-content: center;
-		flex-direction: row;
+		flex-direction: column;
+		text-align: center;
+		background: #ffffff08;
+		padding: 9px;
+		border-radius: 20px;
 		& video {
 			width: 200px;
 			height: 180px;
@@ -211,4 +233,24 @@
 	.profile {
 		display: flex;
 	}
+.place-img{
+	width: 100px;
+	height: 100px;
+	object-fit: cover;
+	border-radius: 8px;
+	margin-bottom: 10px;
+}
+
+.xy-b{
+	height: 40px;
+	background: rgb(7, 33, 112);
+	border-radius: 6px;
+	color: white;
+	cursor: pointer;
+	border:2px solid rgb(14, 67, 150);
+	transition: 300ms;
+	&:hover{
+		background: rgb(15, 57, 183);
+	}
+}
 </style>

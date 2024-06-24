@@ -5,10 +5,18 @@
 	import '../styles/main.scss';
 	import { onMount } from 'svelte';
 	import { Cookies } from '../lib/globals';
-	import { viewPageIndex, SettingsContext, updatePageIndex, userContextUpdate, updateSettings } from '../lib/store';
+	import {
+		viewPageIndex,
+		SettingsContext,
+		updatePageIndex,
+		userContextUpdate,
+		updateSettings,
+		editMediaContext
+	} from '../lib/store';
 	import Settings from '../components/settings.svelte';
+	import EditMedia from '../components/editMedia.svelte';
 
-	let fluidLights:any = false;
+	let fluidLights: any = false;
 	let buttonIndex = [0, 0];
 	$: $viewPageIndex, (buttonIndex = $viewPageIndex);
 
@@ -21,30 +29,36 @@
 		'Profile'
 	];
 	onMount(() => {
-		const settings = localStorage.getItem('setting')
-		if(settings) updateSettings(JSON.parse(settings))
+		const cur_page = window.localStorage.getItem('cur_page');
+		if (cur_page) updatePageIndex(JSON.parse(cur_page));
+		const settings = localStorage.getItem('setting');
+		if (settings) updateSettings(JSON.parse(settings));
 		const f = JSON.parse(Cookies.get('fluid_lights'));
 		if (f === null) fluidLights = true;
 		else fluidLights = f;
-		let user:any= Cookies.get('user');
+		let user: any = Cookies.get('user');
 		if (user) {
 			user = JSON.parse(user);
 			userContextUpdate(user);
 		}
 	});
 	const toggleFluid = () => {
-		fluidLights= !fluidLights;
-		Cookies.set('fluid_lights', fluidLights);
+		fluidLights = !fluidLights;
+		Cookies.set('fluid_lights', fluidLights, { expires: 365 });
 	};
-	const handlePage = (i:number) => 
+	const handlePage = (i: number) => {
 		updatePageIndex([$viewPageIndex[1], i]);
-	
+		window.localStorage.setItem('cur_page', `[${$viewPageIndex[1]}, ${i}]`);
+	};
 </script>
 
 {#if fluidLights}
 	<ThreeScene />
 {/if}
 <div class="wrapper" id="boundary">
+	{#if $editMediaContext}
+		<EditMedia />
+	{/if}
 	{#if $SettingsContext.isOpened}
 		<Settings />
 	{/if}

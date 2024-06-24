@@ -17,3 +17,8 @@ package
 !.env.example
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+backend/nerf_model_x_1000iteration.h5
+backend/tiny_nerf.ipynb
+backend/.ipynb_checkpoints/tiny_nerf-checkpoint.ipynb
+test-data/
+backend/tiny_nerf_data.npz

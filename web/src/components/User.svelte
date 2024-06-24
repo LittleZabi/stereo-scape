@@ -156,7 +156,7 @@
 				if (res.success === 0) message = { message: res.message, variant: 'danger' };
 				if (res.success === 1) {
 					message = { message: res.message, variant: 'success' };
-					Cookies.set('user', JSON.stringify(res.user), {expires: 30});
+					Cookies.set('user', JSON.stringify(res.user), {expires: 365});
 					userContextUpdate(res.user)
 				}
 			})
@@ -204,7 +204,7 @@
 			res =res.data
 			if(res.success === 1){
 				message = {message: res.message, variant: 'success'}
-				Cookies.set('user', res.user) 
+				Cookies.set('user', res.user, {expires: 365}) 
 				userContextUpdate(res.user)
 			}
 			if(res.success === 0){

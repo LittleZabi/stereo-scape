@@ -40,7 +40,7 @@
 <div class="modal" transition:slide>
 	<div class="head">
 		<h3>Settings</h3>
-		<button on:click={() => updateSettings({ isOpened: false })}>&times;</button>
+		<button class="xuw" on:click={() => updateSettings({ isOpened: false })}>&times;</button>
 	</div>
 	<div class="container" id="setting_form">
 		<div class="group">
@@ -131,23 +131,6 @@
 		align-items: center;
 		justify-content: space-between;
 		& button {
-			font-size: 29px;
-			padding: 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			border-radius: 50%;
-			width: 30px;
-			height: 30px;
-			border: none;
-			background: rgb(255, 0, 89);
-			color: white;
-			cursor: pointer;
-			transition: 300ms;
-			&:hover {
-				color: rgb(255, 0, 89);
-				background: white;
-			}
 		}
 	}
 	.container {

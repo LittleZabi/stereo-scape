@@ -34,5 +34,5 @@ const UsersDataSchema = new mongoose.Schema(
 	{ timestamps: true }
 );
 export const Users: any = mongoose.models.users || mongoose.model('users', UsersSchema);
-export const UsersData:any = mongoose.models.users_data || mongoose.model('users_data', UsersDataSchema)
+export const UserProjects:any = mongoose.models.user_project || mongoose.model('user_project', UsersDataSchema)
 export const Visitors:any = mongoose.models.visitors || mongoose.model('visitors', visitorsSchema)

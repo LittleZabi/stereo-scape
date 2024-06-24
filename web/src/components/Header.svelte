@@ -1,11 +1,11 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import { viewPageIndex,updateSettings, userContext, SettingsContext } from '../lib/store';
+	import { viewPageIndex, updateSettings, userContext, SettingsContext } from '../lib/store';
 	export let fluidToggle;
 	export let fluid;
 </script>
 
-<header class={$viewPageIndex > 0 ? 'active' : ''}>
+<header class={$viewPageIndex[1] > 0 ? 'active' : ''}>
 	<nav>
 		<ul>
 			<li>
@@ -39,8 +39,18 @@
 					{/if}
 				</a>
 			</li>
+			<button
+				class="setting {$SettingsContext.isOpened ? 'active' : ''}"
+				on:click={() => updateSettings({ isOpened: !$SettingsContext.isOpened })}
+			>
+				settings
+			</button>
+
 			<li>
-				<button class='setting {$SettingsContext.isOpened ? 'active': ''}' on:click={() => updateSettings({isOpened: !$SettingsContext.isOpened})}>
+				<button
+					class="setting {$SettingsContext.isOpened ? 'active' : ''}"
+					on:click={() => updateSettings({ isOpened: !$SettingsContext.isOpened })}
+				>
 					<Icon icon="line-md:cog-loop" />
 				</button>
 			</li>
@@ -49,15 +59,16 @@
 </header>
 
 <style>
-	.setting{
-		background:none;
-		border:none;
+	.setting {
+		background: none;
+		border: none;
 		color: white;
 		font-size: 26px;
 		padding: 0;
 		cursor: pointer;
-		&.active, &:hover{
-			color: #ffa300; 
+		&.active,
+		&:hover {
+			color: #ffa300;
 		}
 	}
 	h2 {
@@ -89,7 +100,7 @@
 	}
 	a {
 		margin: 0 10px;
-&:hover{
+		&:hover {
 			color: #ffa300;
 		}
 		& img {
@@ -104,7 +115,6 @@
 		transition: 300ms;
 		width: 25px;
 		height: 25px;
-
 	}
 	.fluid {
 		display: flex;

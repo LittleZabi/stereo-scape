@@ -1,7 +1,6 @@
 // @ts-ignore
 import database from '$lib/database_ops/database';
 // @ts-ignore
-import { Users } from '$lib/database_ops/models';
 import { checkUser, signIn, signUp } from './users_ops';
 
 await database.connect();
