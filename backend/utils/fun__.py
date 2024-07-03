@@ -6,13 +6,13 @@ import os
 
 
 
-def saveAndExtractPoses(videoArr, outputFolder, size, emit):
+def saveAndExtractPoses(videoArr, outputFolder, size, emit, everyFrame=5):
     videoArr[0].save(videoArr[1])
     cap = cv2.VideoCapture(videoArr[1])
     frame_no = 0
     fileSizes = 0
     i = 0
-    skipFrames = 7 
+    skipFrames = everyFrame 
     maxFrames = 60 * 30
     totalFrames = 0
     capFrames = cap.get(cv2.CAP_PROP_FRAME_COUNT) 
@@ -35,7 +35,7 @@ def saveAndExtractPoses(videoArr, outputFolder, size, emit):
             percent = i / totalFrames * 100
             if percent >= 100: 
                 percent = 100
-            emit('progress', {'title': f'Resizing video frame number ({i * skipFrames}): ', 'progress': percent, 'process': 'res_image'})
+            emit('progress', {'title': f'Extracting and Resizing video frame number ({i}): ', 'progress': percent, 'process': 'res_image'})
 
         frame_no += 1
         if frame_no > maxFrames:

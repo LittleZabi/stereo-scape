@@ -1,3 +1,4 @@
+import random
 import subprocess
 import os
 import shutil
@@ -7,7 +8,6 @@ class COLMAP:
     def __init__(self, images_path, emit, checkProcessExecution):
         self.images_path = images_path
         self.project_path = f"{os.getenv('colmap')}\\outputs\\"
-        # self.db_path = f"{os.getenv('colmap')}\\outputs\\database.db"
         self.sparse = f"{os.getenv('colmap')}\\outputs\\sparse\\"
         self.colmap = f"{os.getenv('colmap')}\\COLMAP.bat"
         self.output_txt = f"{os.getenv('colmap')}\\"
@@ -20,8 +20,6 @@ class COLMAP:
     def startProcess(self) :
         pipe = [
             self.ExtractFeatures, 
-            # self.ExhaustiveMatcher, 
-            # self.Mapper, 
             self.ConvertModel, 
             self.delete_colmap_outputs]
         for _ in pipe:
@@ -33,8 +31,8 @@ class COLMAP:
     def ExtractFeatures(self):
         # command = f'{self.colmap} feature_extractor  --database_path {self.db_path} --image_path {self.images_path} --num_threads 4 --max_num_features 2000 --feature_type sift --sift_num_octaves 5 --sift_octave_resolution 1.6'
         # command = f"{self.colmap} automatic_reconstructor --project_path {self.project_path}"
-        self.emit('progress', {'process': 'colmap', 'title': 'Extracting Features from images', 'progress': 13})
-        command = f'{self.colmap} automatic_reconstructor --workspace_path {self.project_path} --image_path {self.images_path} --data_type individual --quality high --num_threads 4'
+        self.emit('progress', {'process': 'colmap', 'title': 'Extracting Features from images', 'progress': random.randint(0, 90)})
+        command = f'{self.colmap} automatic_reconstructor --workspace_path {self.project_path} --image_path {self.images_path} --data_type individual --quality normal'
         subprocess.run(['cmd', '/c', 
             command
         ])

@@ -144,6 +144,7 @@
 		loading = true
 		const form = createForm(dataset);
 		message = false;
+		console.log('sending...req')
 		await axios
 			.post('/api/_users/', form, {
 				headers: {
@@ -153,6 +154,7 @@
 			.then((res: any) => {
 				loading = false;
 				res = res.data;
+				console.log('res => ', res)
 				if (res.success === 0) message = { message: res.message, variant: 'danger' };
 				if (res.success === 1) {
 					message = { message: res.message, variant: 'success' };
@@ -162,6 +164,8 @@
 			})
 			.catch((error) => {
 				loading = false;
+
+				console.log('res => ', error)
 				if (error.response.status === 422) {
 					console.error(error.response.data.message);
 					message = { message: error.response.data.message, variant: 'danger' };

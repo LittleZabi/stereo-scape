@@ -47,6 +47,23 @@ def checkProcessExecution(message=''):
         socket.emit('process_stop', {'message': message} if message != '' else {})
     return processStoped
 
+@app.route('/get-visualz', methods=['GET'])
+def getVisualz():
+    theta = request.args.get('theta')
+    phi = request.args.get('phi')
+    rad = request.args.get('radius')
+    prevImg = request.args.get('prevImg')
+    if not theta:
+        theta = 0
+    if not phi:
+        phi = 0
+    if not rad:
+        rad = 0
+    media = request.args.get('media')
+    model = LoadNeRF(media)
+    img = model.getView(int(theta), float(phi), float(rad), str(prevImg))
+    return img 
+
 @app.route('/generate-video', methods=["POST"])
 def generateVideo():
     form = request.form
@@ -84,6 +101,7 @@ def Files():
     files = []
     i = 0
     isVideo = False
+    isNPZ =False 
     for f in request.files:
         i = i + 1
         file = request.files[f]
@@ -92,37 +110,54 @@ def Files():
         if ex == 'mp4': 
             isVideo = True
             fp = fp + 'vid-'
-        fp = fp + str(i) + '.' + ex
-        files.append([file, fp])
+        
+        if ex == 'npz':
+            isNPZ = True
+            fp = fp + 'dataset.npz'
+            file.save(fp)
+            files.append(fp)
+        else:
+            fp = fp + str(i) + '.' + ex
+            files.append([file, fp])
 
-    if isVideo == False and len(files) < 4:
+    if (isVideo == False and isNPZ == False) and len(files) < 4:
         processStoped = True 
         checkProcessExecution("Process is stopped due to lack of images. select more than 4 images.")
         return {'message': 'Failed please select more 4 images.', 'success': 0}
 
     if settings and settings.get('image_width') and settings.get('image_height'):
         size = (settings.get('image_width'), settings.get('image_height'))
+    
+    npzDatasetPath = ''
 
-    if isVideo:
-        _, fsize, numberOfImages = saveAndExtractPoses(files[0], outputFolder = p, size = size, emit = socket.emit)
+    if isNPZ == False:
+        if isVideo:
+            _, fsize, numberOfImages = saveAndExtractPoses(files[0], outputFolder = p, size = size, emit = socket.emit)
+        else:
+            numberOfImages = 0
+            fsize = 0
+            for file in files:
+                _, fz = resizeAndSave(file[0], file[1], size)
+                if type(fsize) == int:
+                    fsize += fz
+                numberOfImages= 1 + numberOfImages 
+                percent = numberOfImages / len(files) * 100
+                socket.emit('progress', {'title': f'Resizing Image ({file[0].filename}): ', 'progress': percent, 'process': 'res_image'})
+        # colmap = COLMAP(p, socket.emit, checkProcessExecution=checkProcessExecution)
+        # if colmap.error:
+        #     socket.emit('progress', {'process': 'colmap', 'title': 'Extracting features failed ❌', 'progress': 4 / 5 * 100})
+        # ds = setupDataset(p, not colmap.error, socket.emit)
+
+        ds = setupDataset(p, False, socket.emit)
+        if ds.isDatasetCreated():
+            npzDatasetPath = ds.output_npz 
+
     else:
-        numberOfImages = 0
-        fsize = 0
-        for file in files:
-            _, fz = resizeAndSave(file[0], file[1], size)
-            if type(fsize) == int:
-                fsize += fz
-            numberOfImages= 1 + numberOfImages 
-            percent = numberOfImages / len(files) * 100
-            socket.emit('progress', {'title': f'Resizing Image ({file[0].filename}): ', 'progress': percent, 'process': 'res_image'})
-    colmap = COLMAP(p, socket.emit, checkProcessExecution=checkProcessExecution)
-    if colmap.error:
-        socket.emit('progress', {'process': 'colmap', 'title': 'Extracting features failed ❌', 'progress': 4 / 5 * 100})
-    ds = setupDataset(p, not colmap.error, socket.emit)
-    if ds.isDatasetCreated():
+        npzDatasetPath = files[0]
+
+    if npzDatasetPath != '':
         nerf = NeRF(socket.emit, checkProcessExecution=checkProcessExecution, config=settings, media_path=p, save_modal=True)
-        nerf.loadDataset(ds.output_npz)
-        # nerf.loadDataset('./media/test/dataset.npz')
+        nerf.loadDataset(npzDatasetPath)
         nerf.Run()
         
     else:

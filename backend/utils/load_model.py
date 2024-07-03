@@ -2,7 +2,6 @@ import os
 import cv2
 import numpy as np
 import tensorflow as tf
-
 from utils.fun__ import randomString
 from .nerf import NeRF
 import matplotlib.pyplot as plt
@@ -24,13 +23,15 @@ class LoadNeRF(NeRF):
         self.focal = config['focal']
         self.testpose = config['testpose']
         self.N_samples = config['N_samples']
-    
-    def getView(self, the=90, pi=0.8, rad=0.2):
+
+    def getView(self, the=90, pi=0.8, rad=0.2, prevImg=""):
         c2w = self.pose_spherical(the, pi, rad)
         rays_o, rays_d = self.get_rays(self.H, self.W, self.focal, c2w) 
         rgb, depth, acc = self.render_rays(self.loaded_model, rays_o, rays_d, near=2., far=6., N_samples=self.N_samples)
-        img = f'/media/{self.media_path}/view.jpg'
+        img = f'/media/{self.media_path}/__{randomString(5)}.jpg'
         plt.imsave(os.getcwd() + img, rgb.numpy())
+        if prevImg != "":
+            os.remove(os.getcwd() + prevImg)
         return img
     
 

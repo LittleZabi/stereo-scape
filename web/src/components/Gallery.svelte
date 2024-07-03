@@ -8,6 +8,7 @@
 	import { numberFormat, life } from '../lib/globals';
 	import { onMount } from 'svelte';
 	import PnrsGraph from './pnrs-graph.svelte';
+	import { updateMediaContext } from '../lib/store';
 	let data = [];
 	let loading = false;
 	let dataloaded = false;
@@ -147,6 +148,13 @@
 								<Icon icon="material-symbols-light:not-started-outline" style="color: #00ccff" />
 								video
 							</button>
+							<button 
+								class="vid-p"
+							 on:click={() => updateMediaContext({...item, username: item.user.username})}>
+									Edit Model 
+									<Icon icon="carbon:machine-learning-model" />
+								</button>
+
 						</div>
 					</div>
 					<div class="bottom">

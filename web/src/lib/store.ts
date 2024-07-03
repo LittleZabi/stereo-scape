@@ -26,6 +26,7 @@ export const SettingsContext = writable({
     image_width: 100,
     image_height: 100,
     n_iterations: 250,
+    use_colmap: 1,
     isOpened: false
 });
 export const updateSettings = (setting:any) => SettingsContext.update((state:{[key:string]: any}) => ({...state, ...setting}))

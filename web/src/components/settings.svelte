@@ -12,7 +12,8 @@
 		modal_width: number;
 		n_samples: number;
 		n_iterations: number;
-		isOpened: boolean
+		use_colmap: number;
+		isOpened: boolean;
 	} = $SettingsContext;
 	const handelInput = (event: any) => {
 		let value = parseInt(event.target.value);
@@ -23,6 +24,7 @@
 		if (name === 'W') Settings.modal_width = value;
 		if (name === 'N_samples') Settings.n_samples = value;
 		if (name === 'N_iterations') Settings.n_iterations = value;
+		if (name === 'use_colmap') Settings.use_colmap = value;
 	};
 	const handleSave = async (event: any) => {
 		updateSettings({ ...Settings, isOpened: false });
@@ -45,48 +47,118 @@
 	<div class="container" id="setting_form">
 		<div class="group">
 			<div>
-				<p class="info">
-					width x height (set images width and height lower size can help to reduce training time
-					but quality will effect)
-				</p>
 				<div class="rough">
 					<span>Width (px)</span>
-					<input type="number" name="width" id="width" step="1" min="32" max="1024" value={Settings.image_width} />
+					<input
+						type="number"
+						name="width"
+						id="width"
+						step="1"
+						min="32"
+						max="1024"
+						value={Settings.image_width}
+					/>
 					<span>Height (px)</span>
-					<input type="number" name="height" id="height" step="1" min="32" max="1024" value={Settings.image_height} />
+					<input
+						type="number"
+						name="height"
+						id="height"
+						step="1"
+						min="32"
+						max="1024"
+						value={Settings.image_height}
+					/>
+					<div class="info">
+						<span class="iex"> &iexcl; </span>
+						<span class="ms">
+							width x height (set images width and height lower size can help to reduce training
+							time but quality will effect)
+						</span>
+					</div>
 				</div>
 			</div>
 		</div>
-		<p class="info">
-			Set D (depth) and W (width) of NeRF model network. Depth is number of layers (for NeRF 8 is
-			best) and Width is number of neurons (256 units) in each layer. D and W determine the capacity
-			and complexity of the NN. increasing D or W can improve the model's ability to fit complex
-			data, but also increase the risk of overfitting.
-		</p>
 		<div class="group">
 			<div>
 				<p>Depth (number of layers keep 8 max).</p>
-				<input type="number" name="D" id="" step="2" min="2" max="32" value={Settings.modal_depth} />
+				<input
+					type="number"
+					name="D"
+					id=""
+					step="2"
+					min="2"
+					max="32"
+					value={Settings.modal_depth}
+				/>
 			</div>
 			<div style="margin-left: 25px">
 				<p>Width (number of units/neurons in a layer max 256)</p>
-				<input type="number" name="W" id="" step="1" min="8" max="1024" value={Settings.modal_width} />
+				<input
+					type="number"
+					name="W"
+					id=""
+					step="1"
+					min="8"
+					max="1024"
+					value={Settings.modal_width}
+				/>
+			</div>
+			<div class="info" style="margin-top: -5px">
+				<span class="iex"> &iexcl; </span>
+				<span class="ms">
+					Set D (depth) and W (width) of NeRF model network. Depth is number of layers (for NeRF 8
+					is best) and Width is number of neurons (256 units) in each layer. D and W determine the
+					capacity and complexity of the NN. increasing D or W can improve the model's ability to
+					fit complex data, but also increase the risk of overfitting.
+				</span>
 			</div>
 		</div>
 		<div class="group">
 			<div>
-				<p>
-					Number of samples (less images and a high number of samples can overfit model. so set with
-					caution).
-				</p>
-				<input type="number" name="N_samples" id="" step="1" min="16" max="1024" value={Settings.n_samples} />
+				<p>Number of samples.</p>
+				<input
+					type="number"
+					name="N_samples"
+					id=""
+					step="1"
+					min="16"
+					max="1024"
+					value={Settings.n_samples}
+				/>
 			</div>
-			<div>
-				<p>
-					Number of Iterations (More iteration can give max quality but slow speed. set 1000 for best result 250 for normal quality).
-				</p>
-				<input type="number" name="N_iterations" id="" step="1" min="10" max="1000" value={Settings.n_iterations} />
+			<div style="margin-left: 75px;">
+				<p>Number of Iterations</p>
+				<input
+					type="number"
+					name="N_iterations"
+					id=""
+					step="1"
+					min="10"
+					max="1000"
+					value={Settings.n_iterations}
+				/>
 			</div>
+			<div class="info" style="margin-top: -5px">
+				<span class="iex"> &iexcl; </span>
+				<span class="ms">
+					<b>Number of samples:</b> less images and a high number of samples can overfit model. so
+					set with caution.
+					<br>
+					<b> Number of Iterations: </b>
+					More iteration can give max quality but slow speed. set 1000 for best result 250 for normal
+					quality
+				</span>
+			</div>
+		</div>
+		<div class="group center">
+			<input
+				type="checkbox"
+				name="use_colmap"
+				id="use_colmap"
+				checked={Settings.use_colmap ? true : false}
+			/>
+			<label for="use_colmap">Use colmap to extract cameras parameters (good but takes time).</label
+			>
 		</div>
 		<div class="x92">
 			<button class="save-btn" on:click={handleSave}>Save Setting</button>
@@ -95,6 +167,18 @@
 </div>
 
 <style lang="scss">
+	.center {
+		align-items: center;
+		& label {
+			margin-top: 8px;
+			font-size: 14px;
+		}
+	}
+	.group input[type='checkbox'] {
+		width: 20px !important;
+		height: 20px !important;
+		margin-right: 10px;
+	}
 	.x92 {
 		display: flex;
 		align-items: end;
@@ -116,15 +200,47 @@
 			color: white;
 		}
 	}
-	.info {
-		// margin-top: 8px;
-		// margin-bottom: 10px;
-		font-size: 14px;
-		background: #ffffff17;
-		line-height: 1.4;
-		color: #dfdfdf;
-		padding: 8px 5px;
-		border-radius: 4px;
+	div.info {
+		margin-left: 20px;
+		& .iex {
+			background: rgb(36, 36, 90);
+			border: 1px solid rgba(255, 255, 255, 0.096);
+			width: 25px;
+			height: 25px;
+			border-radius: 50%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-weight: bold;
+			text-align: center;
+			cursor: pointer;
+			z-index: -1;
+			position: relative;
+		}
+
+		& .ms {
+			position: absolute;
+			z-index: 9;
+			padding: 8px 5px;
+			border-radius: 4px;
+			font-size: 14px;
+			line-height: 1.4;
+			color: #dfdfdf;
+			width: 300px;
+			margin-top: 4px;
+			background: rgb(29, 28, 78);
+			border: 1px solid rgba(245, 245, 245, 0.105);
+			visibility: hidden;
+			opacity: 0;
+			transition: 300ms ease-out;
+		}
+		position: relative;
+		z-index: 1000;
+
+		&:hover > .ms {
+			visibility: visible;
+			opacity: 1;
+		}
 	}
 	.head {
 		display: flex;

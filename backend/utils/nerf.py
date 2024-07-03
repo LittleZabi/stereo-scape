@@ -1,9 +1,7 @@
 import numpy as np
-import json
 from .fun__ import randomString
 import time
 import os
-import cv2
 import matplotlib.pyplot as plt
 
 import tensorflow as tf
@@ -162,7 +160,6 @@ class NeRF:
         
         if self.save_modal:
             self.saveModel(self.media_path)
-
         
     def posenc(self, x):
         rets = [x]
@@ -209,11 +206,9 @@ class NeRF:
         pts_flat = self.posenc(pts_flat)
         raw = batchify(network_fn)(pts_flat)
         raw = tf.reshape(raw, list(pts.shape[:-1]) + [4])
-
         # Compute opacities and colors
         sigma_a = tf.nn.relu(raw[...,3])
         rgb = tf.math.sigmoid(raw[...,:3])
-
         # Do volume rendering
         dists = tf.concat([z_vals[..., 1:] - z_vals[..., :-1], tf.broadcast_to([1e10], z_vals[...,:1].shape)], -1)
         alpha = 1.-tf.exp(-sigma_a * dists)

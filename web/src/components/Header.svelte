@@ -39,12 +39,12 @@
 					{/if}
 				</a>
 			</li>
-			<button
+			<!-- <button
 				class="setting {$SettingsContext.isOpened ? 'active' : ''}"
 				on:click={() => updateSettings({ isOpened: !$SettingsContext.isOpened })}
 			>
 				settings
-			</button>
+			</button> -->
 
 			<li>
 				<button

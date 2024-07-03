@@ -45,16 +45,29 @@
 		}, 1000);
 	};
 	$: estimate_time, estimate_time_interval();
+	const getType = (file: File) => (file.type != '' ? file.type : file.name.split('.').pop());
 	const handleFileInput = async (ev: any) => {
 		message = false;
 		let f = ev.target.files;
 		let files = [...$imagesContext];
-		if (files.length === 1 && files[0].type === 'video/mp4') files = [];
+		if (
+			f[0].type.includes('image/') &&
+			files.length === 1 &&
+			(getType(files[0]) === 'npz' || getType(files[0]) === 'video/mp4')
+		) {
+			files = [];
+		}
+		let isNPZ = getType(f[0]);
+		if (
+			(files.length === 1 && files[0].type === 'video/mp4') ||
+			(files.length === 1 && isNPZ === 'npz')
+		)
+			files = [];
 		if (!files.length) {
 			let k = [];
 			for (let file of f) {
-				const isVideo = file.type === 'video/mp4';
-				if (isVideo) {
+				const ftype = getType(f);
+				if (ftype === 'video/mp4' || ftype === 'npz') {
 					k = [file];
 					break;
 				} else {
@@ -66,8 +79,8 @@
 		}
 		for (let i = 0; i < f.length; i++) {
 			let item = f[i];
-			const isVideo = item.type === 'video/mp4';
-			if (isVideo) {
+			const ftype = getType(item);
+			if (ftype === 'video/mp4' || ftype === 'npz') {
 				files = [item];
 				break;
 			}
@@ -80,7 +93,6 @@
 			});
 			if (!isExist) files.push(item);
 		}
-		console.log('files: ', files);
 		updateImages(files);
 	};
 	let socket: any = undefined;
@@ -159,7 +171,7 @@
 				onUploadProgress: (progressEvent) => {
 					process = {
 						uploading_files: {
-							title: 'Uploading Images',
+							title: 'Uploading data',
 							progress: Math.round((progressEvent.loaded / progressEvent.total) * 100)
 						}
 					};
@@ -267,7 +279,10 @@
 	</p>
 {:else}
 	<h3>Upload your images or video ✅</h3>
-	<p class="x23">Enter your images/video of object. only one video is supported of object. add images/video from different view points of object. ✔</p>
+	<p class="x23">
+		Enter your images/video of object. only one video is supported of object. add images/video from
+		different view points of object. ✔
+	</p>
 {/if}
 {#if !$userContext || $userContext.id === undefined}
 	<p style="margin-bottom: 10px;" class="message danger">User is not logged! please login first</p>
@@ -276,7 +291,7 @@
 {#if ready}
 	<div class="_flex ready_" style="justify-content: space-between">
 		<div class="xz">
-			<h4>{$imagesContext.length} images is ready</h4>
+			<h4>{$imagesContext.length > 1 ? $imagesContext.length + ' images' : 'Video'} is ready</h4>
 			{#if !processStarted}
 				<button class="snd" on:click={() => (ready = false)}>Browse images</button>
 			{/if}
@@ -300,20 +315,6 @@
 						<img src={PUBLIC_BACKEND_URL + nerfRes.image} id="result" alt="" />
 					</div>
 				{/if}
-				<!-- {#if output_video}
-					<div transition:slide={{ axis: 'x' }}>
-						<video
-							autoplay
-							muted
-							loop
-							controls
-							class="vid-x"
-							src={PUBLIC_BACKEND_URL + output_video}
-						>
-							<track kind="captions" />
-						</video>
-					</div>
-				{/if} -->
 			</div>
 			<button
 				class="snd snd1 {processStarted ? 'active' : ''}"
@@ -346,7 +347,7 @@
 				type="file"
 				id="fileInput"
 				multiple
-				accept="video/mp4, image/*"
+				accept="video/mp4, image/*, .npz"
 				on:change={handleFileInput}
 				style="display:none;"
 			/>
