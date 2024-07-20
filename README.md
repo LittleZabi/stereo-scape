@@ -33,28 +33,22 @@ StereoScape is an innovative project that converts 2D images and videos into 3D 
    ```sh
    python -m venv venv
    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-
 3. **Install the required Python libraries:**
    ```sh
     pip install -r requirements.txt`
-
 4. **Start the backend server:**
    ```sh
     python app.py`\
-
 ### Frontend Setup
 1. **Navigate to the frontend directory:**
    ```sh
    cd ../web
-
 2. **Install the required npm packages:**
    ```sh
    npm install
-   
 3. **Start the frontend server:**
    ```sh
    npm run dev
-
 ### 📂 Project Structure
   - `backend/`: Contains the Flask application and related Python scripts.
   - `web/`: Contains the SvelteKit frontend application.
@@ -65,6 +59,14 @@ StereoScape is an innovative project that converts 2D images and videos into 3D 
   - Upload Images/Videos: Use the user-friendly interface to upload 2D images or videos.
   - Processing: The backend processes the images/videos, extracts features using COLMAP, and creates a dataset.
   - 3D Reconstruction: The NeRF model processes the dataset to generate high-quality 3D models, viewable from multiple angles.
+
+
+### Project Demo and implementation
+
+Watch the demo of the StereoScape project below:
+
+[![Watch the video](https://img.youtube.com/vi/9jEcSEJdKZ0/maxresdefault.jpg)](https://youtu.be/9jEcSEJdKZ0)
+Click the image above to watch the demo video.
 
 ### 🌟 Contributions
 Feel free to contribute to this project by submitting issues or pull requests. Your contributions are highly appreciated!
